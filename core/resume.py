@@ -8,10 +8,10 @@ Function: Provides common utility functions for checkpoint resumption, result ap
 Usage:
   from core.resume import load_completed_results, append_result, is_rate_limited
 
-  records, perm_fail_count = load_completed_results("path/to/result.csv")
+  all_records, perm_fail_count = load_completed_results("path/to/result.csv")
   # Build completed_keys yourself: set of tuples
   completed_keys = set()
-  for r in records:
+  for r in all_records:
       if r.get("success"):
           completed_keys.add((r["scenario_id"], r["model_id"], ...))
 
@@ -49,25 +49,26 @@ def load_completed_results(result_csv_path_file: str) -> tuple[list[dict], int]:
 
     try:
         df = pd.read_csv(result_csv_path_file)
-        records = df.to_dict("records")
+        all_records = df.to_dict("records")
         perm_fail_count = 0
         retry_count = 0
 
-        for r in records:
-            if r.get("success") == True:
+        for record in all_records:
+            success_val = record.get("success", "")
+            if str(success_val).strip().lower() == "true":
                 continue
-            if is_rate_limited(str(r.get("error", ""))):
+            if is_rate_limited(str(record.get("error", ""))):
                 retry_count += 1
             else:
                 perm_fail_count += 1
 
-        msg = f"  Found {path.name}, Success: {len(records) - perm_fail_count - retry_count}"
+        msg = f"  Found {path.name}, Success: {len(all_records) - perm_fail_count - retry_count}"
         if perm_fail_count > 0:
             msg += f", Permanent Failures (Skipped): {perm_fail_count}"
         if retry_count > 0:
             msg += f", Pending Retry (429): {retry_count}"
         print(msg)
-        return records, perm_fail_count
+        return all_records, perm_fail_count
     except Exception as e:
         print(f"  Failed to read {path.name}: {e}, will start from scratch. ")
         return [], 0
