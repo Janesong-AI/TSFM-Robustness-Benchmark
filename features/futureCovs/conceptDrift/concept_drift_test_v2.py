@@ -277,22 +277,22 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 # ============================================================
 def main():
     scenarios = build_scenarios()
-    records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
+    completed_records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
     
     completed_keys = set()
-    for r in records:
+    for r in completed_records:
         aa_val = str(r.get("auto_adapt", True)).strip() == "True"
-        k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
+        key = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
         if r.get("success"):
-            completed_keys.add(k)
+            completed_keys.add(key)
         elif not is_rate_limited(str(r.get("error", ""))):
-            completed_keys.add(k)
+            completed_keys.add(key)
             
     total_needed = TOTAL_RAW - NO_COV_SKIP_COUNT - DEDUP_SKIP_COUNT - perm_fail_count
-    success_so_far = len([r for r in records if r.get("success")])
+    success_so_far = len([r for r in completed_records if r.get("success")])
     
     print("=" * 90)
-    print(f"总任务: {TOTAL_RAW} | 需完成: {total_needed} | 已完成: {success_so_far}")
+    print(f"总任务: {TOTAL_RAW} | 需完成: {total_needed} | 已完成: {success_so_far} | 永久失败(Skip): {perm_fail_count}")
     print("=" * 90)
     
     stop_run = False

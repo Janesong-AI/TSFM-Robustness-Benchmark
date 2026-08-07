@@ -44,8 +44,8 @@ OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2_error.csv" 
 
 N_CONTEXT = CONTEXT_LENGTH_512      # 上下文窗口总长度(历史段)
-N_FORECAST = FORECAST_POINT_LEN_64   # 预测长度(64)
-N_TOTAL = N_CONTEXT + N_FORECAST    # 576
+N_FORECAST = FORECAST_POINT_LEN_64  # 预测长度 64
+N_TOTAL = N_CONTEXT + N_FORECAST    # 总计长度 576
 
 NO_COV_MODELS = {"Timer-3.5", "Timer-3.0"}     # 不支持协变量的模型列表(Z类场景直接跳过)
 
@@ -253,8 +253,8 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     # 未来协变量
     future_covs_df = scenario.get("future_covs")
     target = scenario["future_target"]
-
     t0 = time.perf_counter()
+
     try:
         kwargs = dict(
             targets=targets_df,
@@ -295,28 +295,27 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 # 4. 主流程
 # ============================================================
 scenarios = build_scenarios()
-records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
+completed_records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
 
 # 构建 completed_keys: 成功 + 永久失败(非限流错误)
 completed_keys = set()
-for r in records:
+for r in completed_records:
     aa_val = str(r.get("auto_adapt", True)).strip() == "True"
     key = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
     if r.get("success") == True:
         completed_keys.add(key)
-    else:
-        if not is_rate_limited(str(r.get("error", ""))):
-            # 永久失败(如422), 加入 completed 跳过
-            completed_keys.add(key)
+    elif not is_rate_limited(str(r.get("error", ""))):
+        # 永久失败(如422), 加入 completed 跳过
+        completed_keys.add(key)
 
 # 实际需完成 = 原始234 - NO_COV跳过12 - 消融去重18 - 历史永久失败(422)
 total_needed = TOTAL_RAW - NO_COV_SKIP_COUNT - DEDUP_SKIP_COUNT - perm_fail_count
 
 # 统计已成功(去重)
-all_results = list(records)
+all_results = list(completed_records)
 success_so_far = 0
 seen_success = set()
-for r in records:
+for r in completed_records:
     if r.get("success") == True:
         aa_val = str(r.get("auto_adapt", True)).strip() == "True"
         k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
