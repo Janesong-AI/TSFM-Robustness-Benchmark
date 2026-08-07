@@ -3,56 +3,39 @@
 """
 dirty_test.py —— 脏数据鲁棒性测试
 ====================================
-
 测试目的: 验证模型对缺失值、异常尖峰的抵抗力
 作用: 测试模型对脏数据的鲁棒性
 原理: 用 7 种脏数据(含 baseline)分别预测, 对比精度退化程度
 
-补充: API限制: TimechoAI API 不支持 NaN 值输入（包括 target 和 cov 列）
+API限制: TimechoAI API 不支持 NaN 值输入(包括 target 和 cov 列)
 
 Author: Janesong
-Create Date: 2026/06/29, Update on 2026/07/12.
+Create Date: 2026/06/29, Update on 2026/08/07.
 """
 
 import time
-from pathlib import Path
-
-import pandas as pd
 import numpy as np
+import pandas as pd
 
-import sys
-sys.path.insert(0, str(Path(__file__).parents[3]))
-
+from config.settings import DATA_DIR, OUTPUT_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast, calc_metrics
 from core.resume import load_completed_results, append_result, is_rate_limited
-from utils.files import save_with_json_backup
+from utils.files import read_csv_to_dataframe
 
 # ============================================================
-# 数据相关配置
+# Data related configuration
 # ============================================================
-SCRIPT_DIR = Path(__file__).parent
-RESULT_PATH = SCRIPT_DIR / "dirty_test_result.csv"  # 预测结果文件
-
-# 7 个测试场景
-SCENES = [
-    ("S0-干净",       "dirty_s0_clean.csv"),
-    ("S1-缺失5%",     "dirty_s1_miss5.csv"),
-    ("S2-缺失15%",    "dirty_s2_miss15.csv"),
-    ("S3-连续缺失",   "dirty_s3_miss_block.csv"),
-    ("S4-单点尖峰",   "dirty_s4_spike_single.csv"),
-    ("S5-多点尖峰",   "dirty_s5_spike_multi.csv"),
-    ("S6-混合脏",     "dirty_s6_mixed.csv"),
-]
+DATA_SUBDIR = DATA_DIR / "features" / "futureCovs" / "dirtyData"    # Test data file path
+DATA_CSV_PATH = DATA_SUBDIR / "dirty_clean.csv"
+OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "dirtyData"
+OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction results file
 
 # ============================================================
-# 断点续跑: 读取已完成结果
+# 计算测试数量
 # ============================================================
-print("=" * 90)
-print("断点续跑: 检查历史结果")
-print("=" * 90)
-
-completed_records, perm_fail_count = load_completed_results(str(RESULT_PATH))
+completed_records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
 
 # 构建已完成测试的 key 集合 (model_id, scene, pass)
 completed_keys = set()
@@ -66,36 +49,37 @@ for r in completed_records:
         retry_keys.add(key)  # 限流错误, 加入重试集合
     # 其他失败不计入 completed_keys, 会重新测试
 
-print(f"   已完成: {len(completed_keys)} 个测试")
-print(f"   待重试(429): {len(retry_keys)} 个测试")
-print(f"   永久失败(跳过): {perm_fail_count} 个测试")
+# 7 个测试场景
+SCENES = [
+    ("S0-干净",       "dirty_s0_clean.csv"),
+    ("S1-缺失5%",     "dirty_s1_miss5.csv"),
+    ("S2-缺失15%",    "dirty_s2_miss15.csv"),
+    ("S3-连续缺失",   "dirty_s3_miss_block.csv"),
+    ("S4-单点尖峰",   "dirty_s4_spike_single.csv"),
+    ("S5-多点尖峰",   "dirty_s5_spike_multi.csv"),
+    ("S6-混合脏",     "dirty_s6_mixed.csv"),
+]
+
+total_tests = len(MODEL_LIST) * len(SCENES) * 2   # 原始 和 预处理两轮
+skipped_tests = len(completed_keys)
+remaining_tests = total_tests - skipped_tests - perm_fail_count
+
+print(f"总任务: {total_tests} | 需完成: {remaining_tests} | 已完成: {skipped_tests} | 永久失败(Skip): {perm_fail_count}")
 print()
 
-# ============================================================
+# Read data
 # 读取 ground truth (用干净数据的后 64 行作为真实值)
-# ============================================================
-print("📦 准备 ground truth...")
-clean_df = pd.read_csv(SCRIPT_DIR / "dirty_clean.csv")
+print("  Reading data for ground truth...")
+clean_df = read_csv_to_dataframe(DATA_CSV_PATH)
 clean_df["time"] = pd.to_datetime(clean_df["time"])
 ground_truth = clean_df.iloc[HISTORY_POINT_LEN_256:]["target"].values
 future_cov = clean_df.iloc[HISTORY_POINT_LEN_256:][["time", "cov"]].copy()
 print(f"   ground_truth: {len(ground_truth)} 个点")
-print(f"   ground_truth 范围: {ground_truth.min():.2f} ~ {ground_truth.max():.2f}")
+print(f"   ground_truth range: {ground_truth.min():.2f} ~ {ground_truth.max():.2f}")
 print()
 
 # ============================================================
-# 计算总测试数量
-# ============================================================
-total_tests = len(MODEL_LIST) * len(SCENES) * 2
-skipped_tests = len(completed_keys)
-remaining_tests = total_tests - skipped_tests
-
-print(f"总测试数: {total_tests} 个 = {len(MODEL_LIST)} 模型 × {len(SCENES)} 场景 × 2轮")
-print(f"已跳过: {skipped_tests} 个, 待执行: {remaining_tests} 个")
-print("=" * 90)
-
-# ============================================================
-# 逐场景 × 逐模型 测试
+# 逐场景 * 逐模型 测试
 # ============================================================
 
 api_call_count = 0  # API 调用计数
@@ -116,7 +100,7 @@ for model_id in MODEL_LIST:
         print(f"\n  🔍 场景: {scene_name} ({csv_file})")
 
         # 读取脏数据
-        df = pd.read_csv(SCRIPT_DIR / csv_file)
+        df = read_csv_to_dataframe(DATA_SUBDIR / csv_file)
         df["time"] = pd.to_datetime(df["time"])
 
         history = df.iloc[:HISTORY_POINT_LEN_256].copy()
@@ -185,7 +169,7 @@ for model_id in MODEL_LIST:
                 # 通过 core/timecho.py 的封装调用 API (间接使用 utils/client.py)
                 api_call_count += 1
                 print(f"     [{pass_name}] API调用 #{api_call_count}...")
-                
+
                 pred_values, elapsed_ms, error = forecast(**forecast_kwargs)
 
                 if error:
@@ -218,8 +202,8 @@ for model_id in MODEL_LIST:
                         "nan_count": nan_count, 
                         "error": error_msg
                     }
-                    append_result(str(RESULT_PATH), result_record)
-                    
+                    append_result(str(RESULT_CSV_PATH), result_record)
+
                 else:
                     # 使用 core/timecho.py 的 calc_metrics 计算精度指标
                     metrics = calc_metrics(pred_values, ground_truth)
@@ -258,7 +242,7 @@ for model_id in MODEL_LIST:
                         "nan_count": nan_count, 
                         "error": None
                     }
-                    append_result(str(RESULT_PATH), result_record)
+                    append_result(str(RESULT_CSV_PATH), result_record)
 
             except Exception as e:
                 error_msg = str(e)
@@ -270,7 +254,7 @@ for model_id in MODEL_LIST:
                     print(f"     [{pass_name}] 失败: {error_msg[:80]}")
                 
                 fail_count += 1
-                
+
                 # 追加结果到 CSV (使用 resume.append_result)
                 result_record = {
                     "model_id": model_id, 
@@ -290,7 +274,7 @@ for model_id in MODEL_LIST:
                     "nan_count": nan_count, 
                     "error": error_msg
                 }
-                append_result(str(RESULT_PATH), result_record)
+                append_result(str(RESULT_CSV_PATH), result_record)
 
             time.sleep(1)
 
@@ -314,8 +298,8 @@ print("=" * 90)
 print("读取完整结果, 生成汇总报告")
 print("=" * 90)
 
-# 读取所有结果（包括之前完成的）
-all_records, _ = load_completed_results(str(RESULT_PATH))
+# 读取所有结果(包括之前完成的)
+all_records, _ = load_completed_results(str(RESULT_CSV_PATH))
 results_data = all_records
 
 # ============================================================
@@ -332,7 +316,7 @@ def get_result(model_id, scene_prefix, pass_name="预处理"):
 # ============================================================
 # 结论分析
 # ============================================================
-print("\n\n" + "=" * 100)
+print("\n" + "=" * 100)
 print("📋 鲁棒性分析结论")
 print("=" * 100)
 
@@ -384,16 +368,11 @@ for model_id in MODEL_LIST:
     print()
 
 # ============================================================
-# 保存结果
+# Results File
 # ============================================================
 print("=" * 90)
-print("保存结果汇总")
+print(" Results File")
 print("=" * 90)
-
-csv_path, json_path = save_with_json_backup(RESULT_PATH, results_data)
-print(f"   ✅ 详细结果已保存CSV: {csv_path}")
-print(f"   ✅ 预测值JSON已保存: {json_path}")
-
-print("\n" + "=" * 100)
-print("测试完成！")
-print("=" * 100)
+print(f"   CSV结果路径: {RESULT_CSV_PATH}")
+print(" Test completed!")
+print("=" * 90)
