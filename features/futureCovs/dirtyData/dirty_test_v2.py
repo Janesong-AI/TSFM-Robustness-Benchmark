@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dirty_test.py —— 脏数据鲁棒性测试
+dirty_test.py —— Dirty data robustness
 ====================================
 
 测试目的: 验证模型对缺失值、异常尖峰的抵抗力
@@ -20,6 +20,7 @@ import pandas as pd
 
 from config.settings import DATA_DIR, OUTPUT_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
+from core.dataResults import clean_nan_values, get_results
 from core.timecho import forecast, calc_metrics
 from core.resume import load_completed_results, append_result, is_rate_limited
 from utils.files import read_csv_to_dataframe
@@ -31,7 +32,7 @@ DATA_SUBDIR = DATA_DIR / "features" / "futureCovs" / "dirtyData"    # Test data 
 DATA_CSV_PATH = DATA_SUBDIR / "dirty_clean.csv"
 OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "dirtyData"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
-RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction results file 预测结果文件
+RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result_v2.csv"    # Prediction results file
 
 # ============================================================
 # 计算测试数量
@@ -79,9 +80,29 @@ print(f"   ground_truth: {len(ground_truth)} 个点")
 print(f"   ground_truth range: {ground_truth.min():.2f} ~ {ground_truth.max():.2f}")
 print()
 
+def make_base_record(model_id, csv_file, nan_count, ground_truth):
+    """创建 base_record,确保列顺序固定"""
+    return {
+        "model_id": model_id,
+        "scene": None,
+        "csv_file": csv_file,
+        "pass": None,
+        "success": None,
+        "mae": None,
+        "rmse": None,
+        "mape": None,
+        "latency_ms": None,
+        "pred_min": None,
+        "pred_max": None,
+        "truth_min": float(np.min(ground_truth)),
+        "truth_max": float(np.max(ground_truth)),
+        "is_explosion": None,
+        "nan_count": nan_count,
+        "error": None,
+    }
 
 # ============================================================
-# 逐场景 × 逐模型 测试
+# 逐场景 * 逐模型 测试
 # ============================================================
 
 api_call_count = 0  # API 调用计数
@@ -113,54 +134,47 @@ for model_id in MODEL_LIST:
         data_range = f"{valid_vals.min():.1f}~{valid_vals.max():.1f}" if len(valid_vals) > 0 else "全NaN"
         print(f"     历史 target: NaN={nan_count}, 范围={data_range}")
 
+        scene_base = make_base_record(model_id, csv_file, nan_count, ground_truth)
+
         # ===== 两轮测试: 原始 + 预处理后 =====
         for pass_name, pass_df in [("原始", history.copy()), ("预处理", history.copy())]:
-            test_key = (model_id, f"{scene_name}[{pass_name}]", pass_name)
-            
+            label = f"{scene_name}[{pass_name}]"
+            test_key = (model_id, label, pass_name)
+
             # 断点续跑: 检查是否已完成或待重试
             if test_key in completed_keys and test_key not in retry_keys:
                 # 已成功完成, 跳过
                 print(f"     [{pass_name}] 已完成, 跳过")
                 continue
-            
+
             # 如果是待重试的限流错误, 提示用户
             if test_key in retry_keys:
                 print(f"     [{pass_name}] 重试(之前429限流)")
             
             target_nan_count = pass_df["target"].isna().sum()
             cov_nan_count = pass_df["cov"].isna().sum() if "cov" in pass_df.columns else 0
-            
-            # ✅ 如果原始轮有 NaN，跳过测试（API 不支持 NaN 输入）
+
+            label = f"{scene_name}[{pass_name}]"
+
+            # ✅ 如果原始轮有 NaN,跳过测试(API 不支持 NaN 输入)
             if pass_name == "原始" and (target_nan_count > 0 or cov_nan_count > 0):
-                print(f"     [{pass_name}] 跳过测试（API不支持NaN: target={target_nan_count}, cov={cov_nan_count}）")
+                print(f"     [{pass_name}] 跳过测试(API不支持NaN: target={target_nan_count}, cov={cov_nan_count})")
                 skipped_nan_count += 1
                 
-                label = f"{scene_name}[{pass_name}]"
-                
-                # 记录失败结果（明确标注原因）
+                # 记录失败结果(明确标注原因)
                 result_record = {
-                    "model_id": model_id, 
-                    "scene": label, 
-                    "csv_file": csv_file,
-                    "pass": pass_name, 
-                    "success": False, 
-                    "mae": None, 
-                    "rmse": None, 
-                    "mape": None,
-                    "latency_ms": 0, 
-                    "pred_min": None, 
-                    "pred_max": None,
-                    "truth_min": float(np.min(ground_truth)), 
-                    "truth_max": float(np.max(ground_truth)),
-                    "is_explosion": None, 
-                    "nan_count": nan_count, 
-                    "error": "API不支持NaN输入（原始数据有缺失值）"
+                    **scene_base,
+                    "scene": label,
+                    "pass": pass_name,
+                    "success": False,
+                    "latency_ms": 0,
+                    "error": "API不支持NaN输入(原始数据有缺失值)"
                 }
                 append_result(str(RESULT_CSV_PATH), result_record)
 
                 continue
 
-            # ✅ 预处理轮：填充所有 NaN
+            # ✅ 预处理轮:填充所有 NaN
             if pass_name == "预处理":
                 if target_nan_count > 0:
                     pass_df["target"] = pass_df["target"].ffill().bfill()
@@ -170,13 +184,12 @@ for model_id in MODEL_LIST:
                     pass_df["cov"] = pass_df["cov"].ffill().bfill()
                     print(f"     [{pass_name}] 协变量列预处理: 填充 {cov_nan_count} 个NaN")
             else:
-                # 原始轮（无 NaN）：不做任何处理
-                print(f"     [{pass_name}] 原始数据（无NaN），直接测试")
+                # 原始轮(无 NaN):不做任何处理
+                print(f"     [{pass_name}] 原始数据(无NaN),直接测试")
 
             history_targets = pass_df[["time", "target"]]
             history_covs = pass_df[["time", "cov"]]
 
-            label = f"{scene_name}[{pass_name}]"
             try:
                 # 动态构建参数: 如果是 Timer 系列, 不传协变量
                 forecast_kwargs = {
@@ -195,38 +208,28 @@ for model_id in MODEL_LIST:
                 # 通过 core/timecho.py 的封装调用 API (间接使用 utils/client.py)
                 api_call_count += 1
                 print(f"     [{pass_name}] API调用 #{api_call_count}...")
-                
+
                 pred_values, elapsed_ms, error = forecast(**forecast_kwargs)
 
                 if error:
-                    error_msg = error
                     
                     # 判断是否为限流错误
-                    if is_rate_limited(error_msg):
+                    if is_rate_limited(error):
                         print(f"     [{pass_name}] 限流(429), 已记录, 下次重试")
                     else:
-                        print(f"     [{pass_name}] 失败: {error_msg[:80]}")
+                        print(f"     [{pass_name}] 失败: {error[:80]}")
                     
                     fail_count += 1
-                    
+
                     result_record = {
-                        "model_id": model_id, 
-                        "scene": label, 
-                        "csv_file": csv_file,
-                        "pass": pass_name, 
-                        "success": False, 
-                        "mae": None, 
-                        "rmse": None, 
-                        "mape": None,
-                        "latency_ms": elapsed_ms, 
-                        "pred_min": None, 
-                        "pred_max": None,
-                        "truth_min": float(np.min(ground_truth)), 
-                        "truth_max": float(np.max(ground_truth)),
-                        "is_explosion": None, 
-                        "nan_count": nan_count, 
-                        "error": error_msg
+                        **scene_base,
+                        "scene": label,
+                        "pass": pass_name,
+                        "success": False,
+                        "latency_ms": elapsed_ms,
+                        "error": error,
                     }
+                    result_record = clean_nan_values(result_record)
                     append_result(str(RESULT_CSV_PATH), result_record)
 
                 else:
@@ -249,28 +252,24 @@ for model_id in MODEL_LIST:
                     success_count += 1
 
                     result_record = {
-                        "model_id": model_id, 
-                        "scene": label, 
-                        "csv_file": csv_file,
-                        "pass": pass_name, 
-                        "success": True, 
-                        "mae": mae, 
-                        "rmse": rmse, 
+                        **scene_base,
+                        "scene": label,
+                        "pass": pass_name,
+                        "success": True,
+                        "mae": mae,
+                        "rmse": rmse,
                         "mape": mape,
-                        "latency_ms": elapsed_ms, 
-                        "pred_min": pred_min, 
+                        "latency_ms": elapsed_ms,
+                        "pred_min": pred_min,
                         "pred_max": pred_max,
-                        "truth_min": truth_min, 
-                        "truth_max": truth_max, 
                         "is_explosion": is_explosion,
-                        "nan_count": nan_count, 
-                        "error": None
                     }
+                    result_record = clean_nan_values(result_record)
                     append_result(str(RESULT_CSV_PATH), result_record)
 
             except Exception as e:
                 error_msg = str(e)
-                
+
                 # 判断是否为限流错误
                 if is_rate_limited(error_msg):
                     print(f"     [{pass_name}] 限流(429), 已记录, 下次重试")
@@ -278,25 +277,16 @@ for model_id in MODEL_LIST:
                     print(f"     [{pass_name}] 失败: {error_msg[:80]}")
                 
                 fail_count += 1
-                
+
                 result_record = {
-                    "model_id": model_id, 
-                    "scene": label, 
-                    "csv_file": csv_file,
-                    "pass": pass_name, 
-                    "success": False, 
-                    "mae": None, 
-                    "rmse": None, 
-                    "mape": None,
-                    "latency_ms": 0, 
-                    "pred_min": None, 
-                    "pred_max": None,
-                    "truth_min": float(np.min(ground_truth)), 
-                    "truth_max": float(np.max(ground_truth)),
-                    "is_explosion": None, 
-                    "nan_count": nan_count, 
-                    "error": error_msg
+                    **scene_base,
+                    "scene": label,
+                    "pass": pass_name,
+                    "success": False,
+                    "latency_ms": 0,
+                    "error": error_msg,
                 }
+                result_record = clean_nan_values(result_record)
                 append_result(str(RESULT_CSV_PATH), result_record)
 
             time.sleep(1)
@@ -307,13 +297,8 @@ for model_id in MODEL_LIST:
 print()
 print("=" * 90)
 print("测试统计")
+print(f"   API调用次数: {api_call_count} | 成功: {success_count} | 失败: {fail_count} | 跳过(已完成): {skipped_tests} | 跳过(API不支持NaN): {skipped_nan_count}")
 print("=" * 90)
-print(f"   API调用次数: {api_call_count}")
-print(f"   成功: {success_count}")
-print(f"   失败: {fail_count}")
-print(f"   跳过(已完成): {skipped_tests}")
-print(f"   跳过(API不支持NaN): {skipped_nan_count}")
-print()
 
 # ============================================================
 # 读取完整结果并生成汇总报告
@@ -322,25 +307,10 @@ print("=" * 90)
 print("读取完整结果, 生成汇总报告")
 print("=" * 90)
 
-# 读取所有结果（包括之前完成的）
-all_records, _ = load_completed_results(str(RESULT_PATH))
-results_data = all_records
+# 读取所有结果(包括之前完成的)
+results_data, _ = load_completed_results(str(RESULT_CSV_PATH))
 
-# ============================================================
-# 汇总表格
-# ============================================================
-
-def get_result(model_id, scene_prefix, pass_name="预处理"):
-    """辅助函数: 精确获取某个模型、某个场景、某一轮的结果"""
-    for r in results_data:
-        if r["model_id"] == model_id and r["scene"].startswith(scene_prefix) and r["pass"] == pass_name:
-            return r
-    return None
-
-# ============================================================
-# 结论分析
-# ============================================================
-print("\n\n" + "=" * 100)
+print("\n" + "=" * 100)
 print("📋 鲁棒性分析结论")
 print("=" * 100)
 
@@ -352,10 +322,10 @@ for model_id in MODEL_LIST:
         continue
     
     print(f"\n  【{model_id}】")
-    s0_pre = get_result(model_id, "S0", "预处理")
+    s0_pre = get_results(results_data, model_id, "S0", "预处理")
     
     if not s0_pre or not s0_pre["success"]:
-        print(f"    ⚠️ 基准场景都失败了, 无法评估鲁棒性.")
+        print(f"    [warning] 基准场景都失败了, 无法评估鲁棒性.")
         continue
 
     baseline_mae = s0_pre["mae"]
@@ -364,8 +334,8 @@ for model_id in MODEL_LIST:
     # 分析缺失值场景
     print(f"\n    ▶ 缺失值抵抗力 (基于[预处理]结果):")
     for scene_prefix in ["S1", "S2", "S3"]:
-        r_pre = get_result(model_id, scene_prefix, "预处理")
-        r_raw = get_result(model_id, scene_prefix, "原始")
+        r_pre = get_results(results_data, model_id, scene_prefix, "预处理")
+        r_raw = get_results(results_data, model_id, scene_prefix, "原始")
 
         # 原始轮结果
         if r_raw and not r_raw["success"]:
@@ -378,21 +348,21 @@ for model_id in MODEL_LIST:
         if r_pre and r_pre["success"]:
             ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
             verdict = "✅ 无影响" if ratio < 1.5 else ("🟡 轻微退化" if ratio < 3 else "🔴 明显退化")
-            print(f"      {r_pre['scene'].replace('[预处理]',''):>14s} (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) → {verdict}")
+            print(f"      {r_pre['scene'].replace('[预处理]',''):>14s} (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
 
     # 分析尖峰场景
     print(f"\n    ▶ 异常尖峰抵抗力 (基于[原始]结果):")
     for scene_prefix in ["S4", "S5"]:
-        r_raw = get_result(model_id, scene_prefix, "原始")
+        r_raw = get_results(results_data, model_id, scene_prefix, "原始")
         if r_raw and r_raw["success"]:
             ratio = r_raw["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
-            verdict = "💥 起飞/雪崩!" if r_raw["is_explosion"] else ("✅ 扛住了" if ratio < 1.5 else "⚠️ 精度退化")
-            print(f"      {r_raw['scene'].replace('[原始]',''):>14s}: MAE={r_raw['mae']:.4f} (基准的 {ratio:.1f}x) → {verdict}")
+            verdict = "💥 起飞/雪崩!" if r_raw["is_explosion"] else ("✅ 扛住了" if ratio < 1.5 else "[warning] 精度退化")
+            print(f"      {r_raw['scene'].replace('[原始]',''):>14s}: MAE={r_raw['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
 
     # 分析混合场景
     print(f"\n    ▶ 混合脏数据 (基于[预处理]结果):")
-    r_pre = get_result(model_id, "S6", "预处理")
-    r_raw = get_result(model_id, "S6", "原始")
+    r_pre = get_results(results_data, model_id, "S6", "预处理")
+    r_raw = get_results(results_data, model_id, "S6", "原始")
     
     if r_raw and not r_raw["success"]:
         if "API不支持NaN输入" in str(r_raw.get("error", "")):
@@ -401,7 +371,7 @@ for model_id in MODEL_LIST:
     if r_pre and r_pre["success"]:
         ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
         verdict = "💥 起飞/雪崩!" if r_pre["is_explosion"] else ("✅ 工业可用" if ratio < 1.5 else "🔴 不可用")
-        print(f"      S6-混合脏 (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) → {verdict}")
+        print(f"      S6-混合脏 (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
     print()
 
 # ============================================================
@@ -410,9 +380,9 @@ for model_id in MODEL_LIST:
 print("=" * 100)
 print("API限制说明")
 print("=" * 100)
-print("   TimechoAI API 不支持 NaN 值输入（包括 target 和 cov 列）")
-print("   因此，原始轮测试在有缺失值时会被跳过")
-print("   预处理轮会先填充 NaN，然后进行测试")
+print("   TimechoAI API 不支持 NaN 值输入(包括 target 和 cov 列)")
+print("   因此,原始轮测试在有缺失值时会被跳过")
+print("   预处理轮会先填充 NaN,然后进行测试")
 print()
 
 print("=" * 90)

@@ -51,7 +51,8 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`  # Concept Drift Test (XYZ scenario)  
    `python run.py features.futureCovs.covariant.cov_test`                # Covariate effectiveness  
    `python run.py features.futureCovs.covariant.cov_test_models`         # Covariate Support Test (Iterate All Models)  
-   `python ./features/futureCovs/dirtyData/dirty_test.py`                # Dirty data robustness  
+   `python run.py features.futureCovs.dirtyData.dirty_test`              # Dirty data robustness (NaN not supported)  
+   `python run.py features.futureCovs.dirtyData.dirty_test_v2`           # Dirty data robustness  
    `python ./features/futureCovs/forecastHorizon/forecast_horizon_ablation.py` # C3 Forecast horizon ablation test  
    `python ./features/futureCovs/freqMismatch/frequency_mismatch_test.py`  # C5 Frequency mismatch robustness  
    `python ./features/futureCovs/inputLength/input_length_test.py`    # input_length ablation test  
