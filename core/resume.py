@@ -6,9 +6,9 @@ core/resume.py —— Resume from Checkpoint
 Function: Provides common utility functions for checkpoint resumption, result appending, and rate limit detection, for use by business test scripts.
 
 Usage:
-  from core.resume import load_completed_results, append_result, is_rate_limited
+  from core.resume import load_results, append_result, is_rate_limited
 
-  all_records, perm_fail_count = load_completed_results("path/to/result.csv")
+  all_records, perm_fail_count = load_results("path/to/result.csv")
   # Build completed_keys yourself: set of tuples
   completed_keys = set()
   for r in all_records:
@@ -26,7 +26,7 @@ import pandas as pd
 RATE_LIMIT_KEYWORDS = ["429", "limit", "quota", "exceed", "rate", "too many"]
 
 
-def load_completed_results(result_csv_path_file: str) -> tuple[list[dict], int]:
+def load_results(result_csv_path_file: str) -> tuple[list[dict], int]:
     """
     Read historical result CSV file and return record list and permanent failure count.
 

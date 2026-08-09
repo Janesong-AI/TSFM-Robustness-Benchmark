@@ -33,7 +33,7 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
-from core.resume import load_completed_results, append_result, is_rate_limited
+from core.resume import load_results, append_result, is_rate_limited
 from core.timecho import forecast
 
 # ============================================================
@@ -295,16 +295,15 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 # 4. 主流程
 # ============================================================
 scenarios = build_scenarios()
-completed_records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
+completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
 
-# 构建 completed_keys: 成功 + 永久失败(非限流错误)
 completed_keys = set()
-for r in completed_records:
-    aa_val = str(r.get("auto_adapt", True)).strip() == "True"
-    key = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
-    if r.get("success") == True:
+for record in completed_records:
+    aa_val = str(record.get("auto_adapt", True)).strip() == "True"
+    key = (str(record["scenario_id"]), str(record["model_id"]), int(record["input_length"]), aa_val)
+    if record.get("success") == True:
         completed_keys.add(key)
-    elif not is_rate_limited(str(r.get("error", ""))):
+    elif not is_rate_limited(str(record.get("error", ""))):
         # 永久失败(如422), 加入 completed 跳过
         completed_keys.add(key)
 

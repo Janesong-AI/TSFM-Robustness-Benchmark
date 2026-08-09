@@ -22,7 +22,7 @@ Usage:
     # Recommended Approach
       from core.dataResults import clean_nan_values, get_results
       from core.timecho import forecast
-      from core.resume import load_completed_results, append_result, is_rate_limited
+      from core.resume import load_results, append_result, is_rate_limited
 
     # Avoid direct imports from utils.client to prevent tight coupling
     # from utils.client import get_timecho_client
@@ -34,7 +34,7 @@ from .dataResults import (
 )
 
 from .resume import (
-    load_completed_results,
+    load_results,
     append_result,
     is_rate_limited
 )
@@ -51,7 +51,7 @@ __all__ = [
     "clean_nan_values", 
     "get_results",
     # --- resume.py ---
-    "load_completed_results",
+    "load_results",
     "append_result",
     "is_rate_limited",
     # --- timecho.py ---

@@ -21,7 +21,7 @@ from config.settings import DATA_DIR, OUTPUT_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.dataResults import clean_nan_values, get_results
 from core.timecho import forecast, calc_metrics
-from core.resume import load_completed_results, append_result, is_rate_limited
+from core.resume import load_results, append_result, is_rate_limited
 from utils.files import read_csv_to_dataframe
 
 # ============================================================
@@ -36,17 +36,15 @@ RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction result
 # ============================================================
 # 计算测试数量
 # ============================================================
-completed_records, perm_fail_count = load_completed_results(str(RESULT_CSV_PATH))
+completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
 
-# 构建已完成测试的 key 集合 (model_id, scene, pass)
-completed_keys = set()
-retry_keys = set()  # 待重试的限流错误
-
-for r in completed_records:
-    key = (r.get("model_id"), r.get("scene"), r.get("pass"))
-    if r.get("success") == True:
+completed_keys = set()  # 构建已完成测试的 key 集合 (model_id, scene, pass)
+retry_keys = set()      # 待重试的限流错误
+for record in completed_records:
+    key = (record.get("model_id"), record.get("scene"), record.get("pass"))
+    if record.get("success") == True:
         completed_keys.add(key)
-    elif is_rate_limited(str(r.get("error", ""))):
+    elif is_rate_limited(str(record.get("error", ""))):
         retry_keys.add(key)  # 限流错误, 加入重试集合
     # 其他失败不计入 completed_keys, 会重新测试
 
@@ -293,7 +291,7 @@ print("读取完整结果, 生成汇总报告")
 print("=" * 90)
 
 # 读取所有结果(包括之前完成的)
-results_data, _ = load_completed_results(str(RESULT_CSV_PATH))
+results_data, _ = load_results(str(RESULT_CSV_PATH))
 
 print("\n" + "=" * 100)
 print("📋 鲁棒性分析结论")
