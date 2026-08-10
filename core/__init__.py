@@ -29,8 +29,12 @@ Usage:
 """
 
 from .dataResults import (
-    clean_nan_values, 
-    get_results
+    get_results,
+    get_results_by_model,
+    get_results_by_scene,
+    get_results_by_pass,
+    clean_nan_values,
+    load_json_with_nan
 )
 
 from .resume import (
@@ -48,8 +52,12 @@ from .timecho import (
 
 __all__ = [
     # --- dataResults.py ---
-    "clean_nan_values", 
     "get_results",
+    "get_results_by_model",
+    "get_results_by_scene",
+    "get_results_by_pass",
+    "clean_nan_values",
+    "load_json_with_nan",
     # --- resume.py ---
     "load_results",
     "append_result",
