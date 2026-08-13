@@ -54,7 +54,7 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    `python run.py features.futureCovs.dirtyData.dirty_test`              # Dirty data robustness (NaN not supported)  
    `python run.py features.futureCovs.dirtyData.dirty_test_v2`           # Dirty data robustness  
    `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation` # C2 Forecast horizon ablation test  
-   `python ./features/futureCovs/freqMismatch/frequency_mismatch_test.py`  # C5 Frequency mismatch robustness  
+   `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`      # C5 Frequency mismatch robustness  
    `python ./features/futureCovs/inputLength/input_length_test.py`    # input_length ablation test  
    `python ./features/futureCovs/irregularSampling/irregular_sampling_test.py`  # Irregular sampling robustness  
 
