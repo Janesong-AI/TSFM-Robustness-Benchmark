@@ -173,4 +173,5 @@ def calc_diff(pred1: np.ndarray | None, pred2: np.ndarray | None) -> float | Non
     """
     if pred1 is None or pred2 is None:
         return None
+
     return float(np.mean(np.abs(pred1 - pred2)))

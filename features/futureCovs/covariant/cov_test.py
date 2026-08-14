@@ -49,10 +49,10 @@ print()
 # ============================================================
 #
 # Scenario description:
-# A. Pass “real” future covariates -> If model uses cov, prediction should be most accurate
-# B. Pass “random noise” covariates -> If model uses cov, prediction should degrade
-# C. Pass “completely opposite” covariates -> If model uses cov, prediction should deviate significantly
-# D. Pass “no” covariates at all -> For comparison: univariate prediction performance
+# A. Pass "real" future covariates -> If model uses cov, prediction should be most accurate
+# B. Pass "random noise" covariates -> If model uses cov, prediction should degrade
+# C. Pass "completely opposite" covariates -> If model uses cov, prediction should deviate significantly
+# D. Pass "no" covariates at all -> For comparison: univariate prediction performance
 #
 # If model [really uses] covariates: A is best, B/C degrade, D is in between
 # If model [does not use] covariates: A/B/C/D are almost the same (passing anything doesn’t matter)

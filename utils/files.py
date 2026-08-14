@@ -256,7 +256,7 @@ def read_csv_to_list(
         
     Returns:
         List[Dict[str, Any]]: List of dictionaries, each dictionary represents one row of data
-        
+
     Example:
         >>> data = read_csv_to_list("./results/test.csv")
         >>> # Returns: [{"model": "a", "mae": 0.5}, {"model": "b", "mae": 0.6}]

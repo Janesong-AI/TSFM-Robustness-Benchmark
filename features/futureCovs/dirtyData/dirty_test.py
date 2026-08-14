@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dirty_test.py —— Dirty data robustness (NaN not supported)
+dirty_test.py —— Dirty Data Robustness Test (NaN not supported)
 ====================================
 测试目的: 验证模型对缺失值、异常尖峰的抵抗力
 作用: 测试模型对脏数据的鲁棒性

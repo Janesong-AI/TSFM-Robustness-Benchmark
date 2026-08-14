@@ -69,7 +69,7 @@ BASE_NOISE_STD = 2
 
 # 漂移参数
 DRIFT_MEAN_SHIFT = 15           # 均值平移幅度
-DRIFT_VARIANCE_MULTIPLIER = 3   # 定义：方差扩张倍数
+DRIFT_VARIANCE_MULTIPLIER = 3   # 定义:方差扩张倍数
 # 计算对应的标准差扩张倍数 (方差是标准差的平方)
 DRIFT_NOISE_STD_MULTIPLIER = np.sqrt(DRIFT_VARIANCE_MULTIPLIER)
 
@@ -106,10 +106,10 @@ def build_scenarios():
     base_history = full_base[:N_CONTEXT].copy()
     base_future = full_base[N_CONTEXT:].copy()
 
-    # --- [修正1] 未来趋势生成：保持历史斜率，不加速 ---
+    # --- [修正1] 未来趋势生成: 保持历史斜率, 不加速 ---
     # 历史斜率
     history_slope = (BASE_TREND_END - BASE_TREND_START) / N_CONTEXT
-    # 未来趋势：从历史终点继续延伸, 保持相同斜率
+    # 未来趋势: 从历史终点继续延伸, 保持相同斜率
     future_trend = np.linspace(BASE_TREND_END, BASE_TREND_END + history_slope * N_FORECAST, N_FORECAST)
     
     t_future = np.arange(N_CONTEXT, N_TOTAL)
@@ -118,7 +118,7 @@ def build_scenarios():
     np.random.seed(42)
     future_noise_base = np.random.randn(N_FORECAST) * BASE_NOISE_STD
     
-    # --- [修正2] 噪声倍率：使用标准差倍率 ---
+    # --- [修正2] 噪声倍率: 使用标准差倍率 ---
     future_noise_expanded = future_noise_base * DRIFT_NOISE_STD_MULTIPLIER
     
     # 构造未来目标序列
@@ -200,12 +200,19 @@ def build_scenarios():
     # ================================================================
     # Z1: 历史段无协变量(全0), 未来协变量为全1
     history_cov_z1 = pd.DataFrame({
-        "time": DATES[:N_CONTEXT], "target": base_history, "load_level": np.zeros(N_CONTEXT)
+        "time": DATES[:N_CONTEXT],
+        "target": base_history,
+        "load_level": np.zeros(N_CONTEXT)
     })
-    future_cov_z1 = pd.DataFrame({"time": DATES[N_CONTEXT:N_TOTAL], "load_level": np.ones(N_FORECAST)})
+    future_cov_z1 = pd.DataFrame({
+        "time": DATES[N_CONTEXT:N_TOTAL],
+        "load_level": np.ones(N_FORECAST)
+    })
     scenarios.append({
         "scenario_id": "Z1", "category": "Z", "label": "Z1-mean(cov)",
-        "history": history_cov_z1, "future_target": future_mean_shift, "future_covs": future_cov_z1,
+        "history": history_cov_z1,
+        "future_target": future_mean_shift,
+        "future_covs": future_cov_z1,
         "description": "cov signal"
     })
     
@@ -220,13 +227,21 @@ def build_scenarios():
 
     y_history_mean = build_y_history('mean_shift')  # 复用 Y1 的历史目标值
     history_cov_z2 = pd.DataFrame({
-        "time": DATES[:N_CONTEXT], "target": y_history_mean,
-        "load_level": np.concatenate([np.zeros(N_CONTEXT - DRIFT_RAMP_LEN), _safe_logspace(0.01, 1.0, DRIFT_RAMP_LEN)])
+        "time": DATES[:N_CONTEXT],
+        "target": y_history_mean,
+        "load_level": np.concatenate([
+          np.zeros(N_CONTEXT - DRIFT_RAMP_LEN),
+          _safe_logspace(0.01, 1.0, DRIFT_RAMP_LEN)])
     })
-    future_cov_z2 = pd.DataFrame({"time": DATES[N_CONTEXT:N_TOTAL], "load_level": np.ones(N_FORECAST)})
+    future_cov_z2 = pd.DataFrame({
+        "time": DATES[N_CONTEXT:N_TOTAL],
+        "load_level": np.ones(N_FORECAST)
+    })
     scenarios.append({
         "scenario_id": "Z2", "category": "Z", "label": "Z2-mean(cov+vis)",
-        "history": history_cov_z2, "future_target": future_mean_shift, "future_covs": future_cov_z2,
+        "history": history_cov_z2,
+        "future_target": future_mean_shift,
+        "future_covs": future_cov_z2,
         "description": "dual signal"
     })
 
@@ -256,13 +271,16 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     future_covs_df = scenario.get("future_covs")
     target = scenario["future_target"]
     t0 = time.perf_counter()
-    
+
     try:
         kwargs = dict(targets=targets_df, model_id=model_id, output_length=N_FORECAST, time_col="time", auto_adapt=auto_adapt)
-        if history_covs_df is not None: kwargs["history_covs"] = history_covs_df
-        if future_covs_df is not None: kwargs["future_covs"] = future_covs_df
-        
+        if history_covs_df is not None:
+            kwargs["history_covs"] = history_covs_df
+        if future_covs_df is not None:
+            kwargs["future_covs"] = future_covs_df
+
         pred_values, elapsed_ms, error = forecast(**kwargs)
+
         if error:
             return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(error), "mae": None, "latency_ms": elapsed_ms}
         

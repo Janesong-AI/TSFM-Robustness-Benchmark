@@ -34,18 +34,18 @@ FORECAST_POINT_LEN_256 = 256
 FORECAST_POINT_LEN_512 = 512
 
 # Training Parameters
-TRAIN_SEQ_LEN_128 = 128     # Training segment length
+TRAIN_SEQ_LEN_128 = 128      # Training segment length
 TRAIN_SEQ_LEN_256 = 256
 TRAIN_SEQ_LEN_512 = 512
 
-TRAIN_PERIOD_HOUR_24 = 24  # Training period (hours)
+TRAIN_PERIOD_HOUR_24 = 24    # Training period (hours)
 
-CONTEXT_LENGTH_256 = 256   # Context window length
+CONTEXT_LENGTH_256 = 256     # Context window length
 CONTEXT_LENGTH_512 = 512
 
 # Drift Parameters
-DRIFT_MEAN_SHIFT_15 = 15          # Magnitude of mean shift
-DRIFT_NOISE_MULTIPLIER_3 = 3      # Noise variance multiplier
+DRIFT_MEAN_SHIFT_15 = 15         # Magnitude of mean shift
+DRIFT_NOISE_MULTIPLIER_3 = 3     # Noise variance multiplier
 
 DRIFT_RAMP_LEN_64 = 64            # Length of drift transition zone
 

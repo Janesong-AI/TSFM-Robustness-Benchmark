@@ -3,11 +3,11 @@
 """
 frequency_mismatch_test.py -- Frequency Mismatch Test
 ====================================
-Objective:
+Test Objective:
   Training period is fixed at 24h, while prediction period shifts to 24h/12h/8h/48h
   to quantify performance degradation caused by training-prediction frequency inconsistency.
 
-Principle:
+Test Principle:
   1. Training Data: Fixed 24h period, model learns 24h seasonal pattern.
   2. Prediction Phase:
      - Model predicts based on training results, continuing the 24h period signal.
@@ -26,7 +26,7 @@ Output Results:
   - CSV File: 8 records (2 models * 4 modes)
   - Metrics: MAE_full, MAE_16, MAE_32, MAE_std, Max_error
 
-Calls: 8 times (2 models * 4 modes)
+Total calls: 8 times (2 models * 4 modes)
 
 Author: Janesong
 Create Date: 2026/07/05, Updated on 2026/08/13.
@@ -340,6 +340,7 @@ def run_frequency_mismatch_test():
             degradation = (ratio - 1) * 100
 
             print(f"    {mode_name:<25s}  MAE: {mae:.4f}  (Degradation {degradation:+.1f}%)")            
+
 
     # --------------------------------------------------------
     # 3.5 Save Results
