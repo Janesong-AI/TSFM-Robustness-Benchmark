@@ -1,244 +1,534 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-场景A: 变采样率与不规则时间戳测试
+irregular_sampling_test.py -- Irregular Sampling Robustness Test
+Scenario A: Variable Sampling Rate and Irregular Timestamp Test
 ====================================
-工业背景:
-  工业现场传感器并非等间隔采样. 经网关聚合后写入时序库时, 时间戳会出现抖动、乱序、甚至重复.
+Test Objective:
+  Verify that the SDK correctly handles the timestamp semantics of 'time_col', 
+  rather than simply processing data based on row index order.
+    Core Hypothesis:
+    - If the SDK ignores timestamps and processes solely by row order, prediction 
+      results across different timestamp scenarios should be identical.
+    - If the SDK correctly interprets timestamps, variations in timestamps should 
+      lead to differences in prediction results.
 
-测试目的:
-  检验 SDK 是否真正理解 time_col 的时间戳语义, 还是仅按行序号处理.
-  若 SDK 静默按序号处理, 则无论时间戳怎么变, 预测结果应完全一致.
+Industrial Context:
+  On-site industrial sensors do not sample at equal intervals. When aggregated 
+  by gateways and written to time-series databases, the following occurs:
+    - Timestamp jitter (clock drift)
+    - Out-of-order data arrival (network retransmission)
+    - Uneven sampling intervals (multi-source asynchronous aggregation)
+    - Periodic packet loss and delayed retransmission
 
+Test Methodology:
+    1. Keep the target value sequence completely consistent.
+    2. Modify only the timestamp column to construct 4 irregular scenarios.
+    3. Compare the variation in prediction accuracy across scenarios.
+    4. Determine if the SDK utilizes timestamp semantics based on MAE differences.
+
+Author: Janesong
+Create Date: 2026/07/12, Updated on 2026/08/14.
 """
 
-import os
-import sys
 import time
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
+from typing import Tuple, Dict, List, Any
+
+from config.settings import OUTPUT_DIR
+from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
+from core.timecho import forecast, calc_metrics
+from utils.files import save_to_csv
 
 # ============================================================
-# 0. 路径配置与导入(与现有脚本保持一致)
+# 0. Configuration Constants
 # ============================================================
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT))
+OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "irregularSampling"
+OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+RESULT_CSV_PATH = OUTPUT_SUBDIR / "irregular_sampling_result.csv"    # Prediction results file
 
-from config.constants import FORECAST_POINT_LEN_64
-from core.timecho import forecast
+HISTORY_LEN = FORECAST_POINT_LEN_256     # 256 historical points for input
+FORECAST_LEN = FORECAST_POINT_LEN_64     # 64 future points to predict
+TOTAL_LEN = HISTORY_LEN + FORECAST_LEN   # Total sequence length
 
-SCRIPT_DIR = Path(__file__).parent
-
-# ============================================================
-# 1. 生成底层信号(等间隔理想序列, 与脏数据测试同源)
-# ============================================================
-np.random.seed(42)
-
-TOTAL = 320  # 256 history + 64 forecast
-FORECAST_LEN = FORECAST_POINT_LEN_64  # 64
-
-# 理想等间隔时间戳(1小时一个点)
-ideal_dates = pd.date_range("2024-01-01", periods=TOTAL, freq="1h")
-
-# 底层信号: 趋势 + 周期 + 噪声
-trend = np.linspace(50, 80, TOTAL)
-seasonal = 15 * np.sin(2 * np.pi * np.arange(TOTAL) / 24)
-noise = np.random.randn(TOTAL) * 2
-target_values = (trend + seasonal + noise).round(4)
-
-# Ground truth(最后 64 点的真实值)
-ground_truth = target_values[-FORECAST_LEN:]
-
-HISTORY_LEN = TOTAL - FORECAST_LEN  # 256
+MODELS = ["Timer-3.5", "Chronos-2"]
+SCENARIOS = [
+    "A1-Baseline(Equidistant)",
+    "A2-MinorJitter(5%)",
+    "A3-ModerateDrift(20%)",
+    "A4-SevereDisorder",
+]
 
 
 # ============================================================
-# 2. 构造 4 种时间戳不规则场景
+# 1. Signal Generation Functions
 # ============================================================
-def make_timestamps(mode):
+def _generate_base_signal(seed: int = 42) -> Tuple[np.ndarray, pd.DatetimeIndex, np.ndarray]:
     """
-    根据 mode 构造不同不规则程度的时间戳.
-    注意: target 值序列始终保持不变, 只有时间戳列变化.
-    这样如果 SDK 忽略时间戳, 4 种场景的 MAE 应该完全相同.
+    Generate base signal with trend, seasonality, and noise.
+
+    All test scenarios use the SAME base signal values to ensure
+    any prediction difference comes ONLY from timestamp variation.
+
+    Args:
+        seed: Random seed for reproducibility
+
+    Returns:
+        target_values: Array of target values (shape: TOTAL_LEN)
+        ideal_dates: Ideal equispaced timestamps (1h interval)
+        ground_truth: Last FORECAST_LEN values as ground truth
     """
-    if mode == "A1-基准(等间隔)":
-        # 严格等间隔 1h, 工业实验室理想采集
+    rng = np.random.RandomState(seed)
+
+    # Ideal equispaced timestamps (1 hour interval)
+    ideal_dates = pd.date_range("2026-08-01", periods=TOTAL_LEN, freq="1h")
+
+    # Base signal components: trend + seasonality + noise
+    trend = np.linspace(50, 80, TOTAL_LEN)  # Linear trend
+    seasonal = 15 * np.sin(2 * np.pi * np.arange(TOTAL_LEN) / 24)  # 24h period
+    noise = rng.randn(TOTAL_LEN) * 2  # Gaussian noise
+
+    target_values = (trend + seasonal + noise).round(4)
+    ground_truth = target_values[-FORECAST_LEN:]
+
+    return target_values, ideal_dates, ground_truth
+
+
+# ============================================================
+# 2. Timestamp Generation Functions
+# ============================================================
+def _make_timestamps(
+    mode: str,
+    ideal_dates: pd.DatetimeIndex,
+    total_len: int,
+    seed: int = 42
+) -> pd.DatetimeIndex:
+    """
+    Construct timestamps with different irregularity levels.
+
+    Crucial: Only timestamps change, target values remain identical.
+
+    Args:
+        mode: Scenario name indicating irregularity level
+        ideal_dates: Ideal equispaced timestamps
+        total_len: Total number of timestamps
+        seed: Random seed for perturbation
+    
+    Returns:
+        DatetimeIndex with irregular timestamps according to mode
+    """
+    rng = np.random.RandomState(seed)
+
+    if mode == "A1-Baseline(Equidistant)":
+        # Scenario A1: Strictly equispaced 1h interval (baseline)
+        # Corresponds to: Ideal lab acquisition environment
         return ideal_dates.copy()
 
-    elif mode == "A2-轻微抖动(5%)":
-        # 间隔在 1h +- 5%(+-180秒)内随机扰动
-        # 对应: 网关时钟漂移
-        deltas_seconds = 3600 + np.random.randn(TOTAL - 1) * 180
-        deltas_seconds = np.maximum(deltas_seconds, 60)  # 最小 1 分钟
+    elif mode == "A2-MinorJitter(5%)":
+        # Scenario A2: Slight jitter with ±5% interval variation
+        # Interval: 1h ± 180s (±5%)
+        # Corresponds to: Gateway clock drift
+        deltas_seconds = 3600 + rng.randn(total_len - 1) * 180
+        deltas_seconds = np.maximum(deltas_seconds, 60)   # Minimum 1 minute
         ts = [ideal_dates[0]]
         for d in deltas_seconds:
             ts.append(ts[-1] + pd.Timedelta(seconds=int(d)))
         return pd.DatetimeIndex(ts)
 
-    elif mode == "A3-中度漂移(20%)":
-        # 间隔在 1h +- 20%(+-720秒)内扰动, 且 10% 的点出现 2-3 倍间隔
-        # 对应: 多源传感器异步聚合, 偶发丢点后补传
-        deltas_seconds = 3600 + np.random.randn(TOTAL - 1) * 720
+    elif mode == "A3-ModerateDrift(20%)":
+        # Scenario A3: Moderate drift with ±20% variation + occasional gaps
+        # Interval: 1h ± 720s (±20%), 10% points have 2-3x gap
+        # Corresponds to: Multi-source async aggregation, packet loss + retransmission
+        deltas_seconds = 3600 + rng.randn(total_len - 1) * 720
         deltas_seconds = np.maximum(deltas_seconds, 60)
-        # 随机选 10% 的间隔放大 2-3 倍
-        mask = np.random.rand(len(deltas_seconds)) < 0.1
-        deltas_seconds[mask] *= np.random.choice([2, 3], size=mask.sum())
+
+        # Randomly enlarge 10% of intervals by 2-3x
+        mask = rng.rand(len(deltas_seconds)) < 0.1
+        deltas_seconds[mask] *= rng.choice([2, 3], size=mask.sum())
+
         ts = [ideal_dates[0]]
         for d in deltas_seconds:
             ts.append(ts[-1] + pd.Timedelta(seconds=int(d)))
         return pd.DatetimeIndex(ts)
 
-    elif mode == "A4-严重乱序":
-        # 在 A3 基础上, 随机打乱 10% 的时间戳
-        # 对应: 网络重传/乱序到达, 时间戳非单调递增
-        ts_list = make_timestamps("A3-中度漂移(20%)").tolist()
+    elif mode == "A4-SevereDisorder":
+        # Scenario A4: Severe disorder with non-monotonic timestamps
+        # Based on A3, then randomly shuffle 10% of timestamps
+        # Corresponds to: Network retransmission, out-of-order arrival
+        ts_list = _make_timestamps("A3-ModerateDrift(20%)", ideal_dates, total_len, seed).tolist()
         n_shuffle = len(ts_list) // 10
-        indices = np.random.choice(len(ts_list), size=n_shuffle, replace=False)
+        indices = rng.choice(len(ts_list), size=n_shuffle, replace=False)
+
         shuffled_vals = [ts_list[i] for i in indices]
-        np.random.shuffle(shuffled_vals)
+        rng.shuffle(shuffled_vals)
         for i, idx in enumerate(indices):
             ts_list[idx] = shuffled_vals[i]
         return pd.DatetimeIndex(ts_list)
 
     else:
-        raise ValueError(f"未知场景: {mode}")
+        raise ValueError(f"Unknown scenario: {mode}")
+
+def _make_test_result(
+    scenario: str,
+    model_id: str,
+    pred_values: np.ndarray | None,
+    ground_truth: np.ndarray,
+    elapsed_ms: float,
+    success: bool,
+    error: str | None
+) -> Dict[str, Any]:
+    """
+    Create a standardized test result dictionary.
+    
+    Args:
+        scenario: Test scenario name
+        model_id: Model identifier
+        pred_values: Prediction values (None if failed)
+        ground_truth: Ground truth values
+        elapsed_ms: Execution time in milliseconds
+        success: Whether prediction succeeded
+        error: Error message (None if succeeded)
+    
+    Returns:
+        Standardized result dictionary
+    """
+    # Calculate metrics (automatically handles None)
+    metrics = calc_metrics(pred_values, ground_truth)
+
+    return {
+        "scenario": scenario,
+        "model_id": model_id,
+        "mae": metrics["MAE"],
+        "rmse": metrics["RMSE"],
+        "mape": metrics["MAPE"],
+        "latency_ms": elapsed_ms,
+        "success": success,
+        "error": error,
+    }
 
 
 # ============================================================
-# 3. 执行测试
+# 3. Timestamp Usage Analysis
 # ============================================================
-MODELS = ["Timer-3.5", "Chronos-2"]
-SCENARIOS = [
-    "A1-基准(等间隔)",
-    "A2-轻微抖动(5%)",
-    "A3-中度漂移(20%)",
-    "A4-严重乱序",
-]
-
-total_calls = len(MODELS) * len(SCENARIOS)
-print("=" * 80)
-print("场景A: 变采样率与不规则时间戳测试")
-print(f"   {len(MODELS)} 模型 x {len(SCENARIOS)} 场景 = {total_calls} 次调用")
-print("=" * 80)
-
-all_results = []
-
-for mode in SCENARIOS:
-    print(f"\n[场景] {mode}")
-
-    # 每次重新设种子, 保证不同场景的噪声扰动可复现
-    np.random.seed(42)
-    timestamps = make_timestamps(mode)
-
-    # 构造 DataFrame: target 值不变, 只有 time 列变
-    df = pd.DataFrame({"time": timestamps, "target": target_values})
-    history = df.iloc[:HISTORY_LEN][["time", "target"]].copy()
-
-    # 打印时间戳间隔统计
-    if mode == "A4-严重乱序":
-        print(f"   时间戳单调递增: {timestamps.is_monotonic_increasing}")
-    deltas = np.diff(timestamps.values.astype("datetime64[s]").astype(np.int64))
-    print(f"   间隔: min={deltas.min()//60}min  max={deltas.max()//3600:.1f}h  mean={deltas.mean()//3600:.1f}h")
-
+def _analyze_timestamp_usage(results: List[Dict]) -> Dict[str, Any]:
+    """
+    Analyze whether SDK utilized timestamp semantics based on metric variance.
+    
+    Core logic: If all scenarios have identical MAE (variance < threshold),
+    SDK likely ignores timestamps and processes by row order only.
+    
+    Args:
+        results: List of test results
+    
+    Returns:
+        analysis: Dictionary containing analysis results and conclusions
+    """
+    analysis = {
+        "model_analysis": {},
+        "overall_conclusion": ""
+    }
+    
     for model_id in MODELS:
-        t0 = time.perf_counter()
-        try:
-            pred_values, elapsed_ms, error = forecast(
-                targets=history,
-                model_id=model_id,
-                output_length=FORECAST_LEN,
-                time_col="time",
-                auto_adapt=True,
-            )
+        model_results = [r for r in results if r["model_id"] == model_id and r["success"]]
+        
+        if len(model_results) < 2:
+            analysis["model_analysis"][model_id] = {
+                "status": "insufficient_data",
+                "message": "Insufficient successful scenarios for analysis"
+            }
+            continue
 
-            if error:
-                print(f"   [{model_id}] 失败: {str(error)[:80]}")
-                all_results.append({
-                    "scenario": mode, "model_id": model_id,
-                    "mae": None, "rmse": None, "latency_ms": elapsed_ms,
-                    "success": False, "error": str(error),
-                })
+        # Get baseline MAE (A1 scenario or first successful)
+        baseline_mae = None
+        for r in model_results:
+            if "A1" in r["scenario"]:
+                baseline_mae = r["mae"]
+                break
+        if baseline_mae is None:
+            baseline_mae = model_results[0]["mae"]
+        
+        # Calculate MAE variance across scenarios
+        mae_values = [r["mae"] for r in model_results]
+        mae_variance = np.var(mae_values)
+
+        # A relative change of 1% is considered significant timestamp usage
+        RELATIVE_THRESHOLD = 0.01
+
+        # Prevent division by zero if baseline_mae is 0
+        if baseline_mae == 0:
+            max_relative_diff = 0.0
+        else:
+            max_relative_diff = max(abs(mae - baseline_mae) / baseline_mae for mae in mae_values)
+
+        timestamps_utilized = max_relative_diff > RELATIVE_THRESHOLD
+
+        analysis["model_analysis"][model_id] = {
+            "baseline_mae": baseline_mae,
+            "mae_values": {r["scenario"]: r["mae"] for r in model_results},
+            "mae_variance": mae_variance,
+            "max_relative_diff": max_relative_diff,
+            "threshold_used": f"{RELATIVE_THRESHOLD*100}%",
+            "timestamps_utilized": timestamps_utilized,
+            "conclusion": "Timestamp semantics utilized" if timestamps_utilized else "SDK might ignore timestamps"
+        }
+    
+    # Overall conclusion
+    all_utilized = all(
+        analysis["model_analysis"].get(m, {}).get("timestamps_utilized", False)
+        for m in MODELS
+    )
+    
+    if all_utilized:
+        analysis["overall_conclusion"] = "PASS: SDK correctly understands and utilizes timestamp semantics"
+    else:
+        analysis["overall_conclusion"] = "WARNING: SDK might ignore time_col and process by row order only"
+    
+    return analysis
+
+
+# ============================================================
+# 4. Main Test Function
+# ============================================================
+def run_irregular_sampling_test(
+    models: List[str] = None,
+    scenarios: List[str] = None,
+    verbose: bool = True
+) -> Tuple[List[Dict], Dict[str, Any]]:
+    """
+    Execute irregular sampling robustness test.
+    
+    Args:
+        models: List of model IDs to test (default: MODELS)
+        scenarios: List of scenario names (default: SCENARIOS)
+        verbose: Whether to print progress info
+    
+    Returns:
+        results: List of test result dictionaries
+            Each dict contains: scenario, model_id, mae, rmse, latency_ms, success, error
+        details: Dictionary containing analysis and metadata
+            Contains: analysis, config, summary
+    """
+    # Use default parameters if not provided
+    models = models or MODELS
+    scenarios = scenarios or SCENARIOS
+    
+    if verbose:
+        print("=" * 80)
+        print("Scenario A: Variable Sampling Rate & Irregular Timestamp Test")
+        print(f"   {len(models)} Models x {len(scenarios)} Scenarios = {len(models) * len(scenarios)} Calls")
+        print("=" * 80)
+    
+    # Step 1: Generate base signal (identical for all scenarios)
+    target_values, ideal_dates, ground_truth = _generate_base_signal(seed=42)
+    
+    # Step 2: Execute tests across all scenarios and models
+    results = []
+    
+    for scenario in scenarios:
+        if verbose:
+            print(f"\n[Scenario] {scenario}")
+
+        # Generate timestamps for current scenario
+        timestamps = _make_timestamps(scenario, ideal_dates, TOTAL_LEN, seed=42)
+
+        # Construct DataFrame (target values unchanged, only timestamps vary)
+        df = pd.DataFrame({"time": timestamps, "target": target_values})
+        history = df.iloc[:HISTORY_LEN][["time", "target"]].copy()
+        assert len(history) == HISTORY_LEN, f"History data length error: {len(history)} != {HISTORY_LEN}"
+
+        # Print timestamp statistics
+        if scenario == "A4-SevereDisorder":
+            # Log disordered state before sorting for analysis
+            is_original_monotonic = history['time'].is_monotonic_increasing
+            if verbose:
+                print(f"   Original timestamp monotonicity: {is_original_monotonic}")
+
+            # Force ascending sort to meet SDK input requirements
+            # After sorting, if SDK ignores timestamps, results will differ from baseline (due to order change)
+            history = history.sort_values('time').reset_index(drop=True)
+            if verbose:
+                print(f"   [Preprocessing] Sorted by timestamp ascending to comply with time-series model input specs")
+
+        # Print timestamp interval statistics (based on sorted history)
+        if verbose:
+            times = history['time'].values.astype('datetime64[s]').astype(np.int64)
+            deltas = np.diff(times)
+            if len(deltas) > 0:
+                print(f"   Intervals: min={deltas.min()/60:.1f}min  max={deltas.max()/3600:.1f}h  mean={deltas.mean()/3600:.1f}h")
             else:
-                mae = float(np.mean(np.abs(pred_values - ground_truth)))
-                rmse = float(np.sqrt(np.mean((pred_values - ground_truth) ** 2)))
-                print(f"   [{model_id}] 成功 MAE={mae:.4f}  RMSE={rmse:.4f}  耗时={elapsed_ms:.0f}ms")
-                all_results.append({
-                    "scenario": mode, "model_id": model_id,
-                    "mae": mae, "rmse": rmse, "latency_ms": elapsed_ms,
-                    "success": True, "error": None,
-                })
-        except Exception as e:
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            print(f"   [{model_id}] 异常: {str(e)[:80]}")
-            all_results.append({
-                "scenario": mode, "model_id": model_id,
-                "mae": None, "rmse": None, "latency_ms": elapsed_ms,
-                "success": False, "error": str(e),
-            })
+                print("   Intervals: N/A (Insufficient data points)")
 
-        time.sleep(1)
+        # Model prediction loop
+        for model_id in models:
+            t0 = time.perf_counter()
+            
+            try:
+                pred_values, elapsed_ms, error = forecast(
+                    targets=history,
+                    model_id=model_id,
+                    output_length=FORECAST_LEN,
+                    time_col="time",
+                    auto_adapt=True,
+                )
+
+                # Validate prediction length (only if no error and prediction values exist)
+                if error is None and pred_values is not None:
+                    if len(pred_values) != FORECAST_LEN:
+                        error = f"Prediction length mismatch: Expected {FORECAST_LEN}, Actual {len(pred_values)}"
+                        pred_values = None
+
+                if error:
+                    result = _make_test_result(
+                        scenario, model_id, None, ground_truth,
+                        elapsed_ms, False, str(error)
+                    )
+                    if verbose:
+                        print(f"   [{model_id}] Failed: {str(error)[:80]}")
+                else:
+                    result = _make_test_result(
+                        scenario, model_id, pred_values, ground_truth,
+                        elapsed_ms, True, None
+                    )
+                    if verbose:
+                        print(f"   [{model_id}] Success MAE={result['mae']:.4f}  RMSE={result['rmse']:.4f}  MAPE={result['mape']:.2f}%  Latency={elapsed_ms:.0f}ms")
+
+                results.append(result)
+            
+            except Exception as e:
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+                result = _make_test_result(
+                    scenario, model_id, None, ground_truth,
+                    elapsed_ms, False, str(e)
+                )
+                results.append(result)
+
+                if verbose:
+                    print(f"   [{model_id}] Exception: {str(e)[:80]}")
+
+            time.sleep(1)  # Rate limiting between API calls
+    
+    # Step 3: Analyze timestamp usage
+    analysis = _analyze_timestamp_usage(results)
+
+    # Step 4: Prepare details
+    details = {
+        "analysis": analysis,
+        "config": {
+            "history_len": HISTORY_LEN,
+            "forecast_len": FORECAST_LEN,
+            "total_len": TOTAL_LEN,
+            "models": models,
+            "scenarios": scenarios,
+        },
+        "summary": {
+            "total_tests": len(results),
+            "successful_tests": sum(1 for r in results if r["success"]),
+            "failed_tests": sum(1 for r in results if not r["success"]),
+        }
+    }
+    
+    return results, details
 
 
 # ============================================================
-# 4. 汇总分析
+# 5. Results Reporting
 # ============================================================
-print("\n" + "=" * 80)
-print("测试结果汇总")
-print("=" * 80)
+def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> None:
+    """
+    Print formatted summary of test results and analysis.
+    
+    Args:
+        results: List of test results
+        analysis: Analysis results from _analyze_timestamp_usage
+    """
+    print("\n" + "=" * 100)
+    print("Test Results Summary")
+    print("=" * 100)
 
-print(f"\n{'场景':>22s} | {'模型':>12s} | {'MAE':>10s} | {'RMSE':>10s} | {'耗时(ms)':>8s} | 状态")
-print("-" * 90)
+    print(f"\n{'Scenario':>22s} | {'Model':>12s} | {'MAE':>10s} | {'RMSE':>10s} | {'MAPE':>10s} | {'Latency(ms)':>12s} | Status")
+    print("-" * 100)
+    
+    for r in results:
+        if r["success"]:
+            # Success: Display all metrics
+            print(f"{r['scenario']:>22s} | {r['model_id']:>12s} | "
+                  f"{r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['mape']:>9.2f}% | "
+                  f"{r['latency_ms']:>12.0f} | Success")
+        else:
+            # Failed: Display N/A
+            error_msg = r['error'][:20] if r.get('error') else 'Unknown'
+            print(f"{r['scenario']:>22s} | {r['model_id']:>12s} | "
+                  f"{'N/A':>10s} | {'N/A':>10s} | {'N/A':>9s} | "
+                  f"{'N/A':>12s} | Failed {error_msg}")
 
-for r in all_results:
-    if r["success"]:
-        print(f"{r['scenario']:>22s} | {r['model_id']:>12s} | {r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['latency_ms']:>8.0f} | 成功")
-    else:
-        print(f"{r['scenario']:>22s} | {r['model_id']:>12s} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>8s} | 失败 {r['error'][:30]}")
+    # Print timestamp usage analysis
+    print("\n" + "=" * 80)
+    print("Core Analysis: Does the SDK Understand Timestamp Semantics?")
+    print("=" * 80)
+    
+    for model_id, model_analysis in analysis["model_analysis"].items():
+        print(f"\n  [{model_id}]")
+        
+        if model_analysis.get("status") == "insufficient_data":
+            print(f"     Insufficient successful scenarios, unable to analyze")
+            continue
+        
+        baseline_mae = model_analysis["baseline_mae"]
+        mae_values = model_analysis["mae_values"]
+        
+        for scenario, mae in mae_values.items():
+            if baseline_mae > 0:
+                ratio = mae / baseline_mae
+                print(f"     {scenario:>22s}: MAE={mae:.4f} ({ratio:.2f}x of Baseline)")
+            else:
+                print(f"     {scenario:>22s}: MAE={mae:.4f} (Baseline MAE is 0)")
+
+        conclusion = model_analysis["conclusion"]
+        if "ignore" in conclusion:
+            print(f"     [WARNING] {conclusion} -> SDK might ignore time_col and process by row index only")
+        else:
+            print(f"     [PASS] {conclusion}")
+    
+    print(f"\nOverall Conclusion: {analysis['overall_conclusion']}")
+
 
 # ============================================================
-# 5. 核心分析: SDK 是否利用了时间戳语义？
+# 6. Main Entry Point
 # ============================================================
-print("\n" + "=" * 80)
-print("核心分析: SDK 是否理解时间戳语义？")
-print("=" * 80)
+def main():
+    """
+    Main entry point for irregular sampling robustness test.
 
-for model_id in MODELS:
-    print(f"\n  [{model_id}]")
-    model_results = [r for r in all_results if r["model_id"] == model_id and r["success"]]
+    This function provides unified interface for running the test,
+    saving results, and printing analysis.
+    """
+    print("Starting Irregular Sampling Robustness Test...")
+    print("=" * 80)
 
-    if len(model_results) < 2:
-        print(f"     成功场景不足, 无法分析")
-        continue
+    # Execute test
+    results, details = run_irregular_sampling_test(
+        models=MODELS,
+        scenarios=SCENARIOS,
+        verbose=True
+    )
 
-    # 取基准 MAE
-    baseline = None
-    for r in model_results:
-        if "A1" in r["scenario"]:
-            baseline = r["mae"]
-            break
+    # Print summary
+    _print_results_summary(results, details["analysis"])
 
-    if baseline is None:
-        baseline = model_results[0]["mae"]
+    # Save results to CSV
+    print("=" * 80)
+    csv_path = save_to_csv(RESULT_CSV_PATH, results)
+    print(f"\nDetailed results saved to CSV: {csv_path}")
 
-    all_same = True
-    for r in model_results:
-        ratio = r["mae"] / baseline if baseline > 0 else 0
-        if abs(r["mae"] - baseline) > 0.01:
-            all_same = False
-        print(f"     {r['scenario']:>22s}: MAE={r['mae']:.4f} (基准的 {ratio:.2f}x)")
+    # Print summary statistics
+    summary = details["summary"]
+    print(f"\nTest Statistics: Total {summary['total_tests']} runs, Success {summary['successful_tests']}, Failed {summary['failed_tests']}")
+    print("=" * 80)
+    print(" Test completed!")
+    print("=" * 80)
 
-    if all_same:
-        print(f"     ⚠️[警告] 所有场景 MAE 完全一致 -> SDK 可能忽略 time_col, 仅按行序号处理")
-    else:
-        print(f"     ✅[通过] 不同时间戳导致 MAE 变化 -> SDK 利用了时间戳语义")
+    return results, details
 
-
-# ============================================================
-# 6. 保存结果
-# ============================================================
-result_df = pd.DataFrame(all_results)
-out_path = SCRIPT_DIR / "irregular_sampling_result.csv"
-result_df.to_csv(out_path, index=False)
-print(f"\n结果已保存: {out_path}")
-print("=" * 80)
-print("测试完成！")
+if __name__ == "__main__":
+    main()

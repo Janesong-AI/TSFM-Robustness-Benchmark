@@ -56,7 +56,7 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation` # C2 Forecast Horizon Ablation Test  
    `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`      # C5 Frequency Mismatch Robustness Test  
    `python run.py features.futureCovs.inputLength.input_length_test`     # Input_length Ablation Test  
-   `python ./features/futureCovs/irregularSampling/irregular_sampling_test.py`  # Irregular sampling robustness  
+   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test` # Irregular Sampling Robustness Test  
 
 ## 5. Testing Objectives
 - Edge case exploration: Systematically verify the engineering robustness of the model against boundary conditions such as complex queries, replica inconsistencies, and out-of-order time-series writes.  

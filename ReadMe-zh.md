@@ -57,7 +57,7 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation` # C2 预测步长消融实验  
    `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`      # C5 频率失配鲁棒性  
    `python run.py features.futureCovs.inputLength.input_length_test`     # input_length消融测试  
-   `python ./features/futureCovs/irregularSampling/irregular_sampling_test.py`  # 非规则采样鲁棒性  
+   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test` # 非规则采样鲁棒性  
 
 ## 5. 测试目标
 - 边缘场景探测: 针对复杂查询、多副本不一致、时间序列乱序写入等边界条件, 系统性验证模型的工程鲁棒性.
