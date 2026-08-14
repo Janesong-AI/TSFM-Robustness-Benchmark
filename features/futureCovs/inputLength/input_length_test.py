@@ -1,137 +1,169 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-input_length_test.py —— input_length消融测试
+input_length_test.py -- input_length Ablation Test
 ====================================
-作用: TimechoAI 预测 API 在不同历史输入长度下的响应能力
-设计目的: 验证 HISTORY_POINT_LEN_256 配置的实际可用性, 确保模型能正确处理
-          指定长度的历史数据, 并返回预期的 output_length 个预测点. 
-原理: 传不同的 input_length (96/192/256/384/512), 对比 MAE/RMSE 变化
+Test Purpose: Evaluate the responsiveness of the TimechoAI prediction API under varying historical input lengths.
+
+Design Goal: Verify the impact of different historical lengths (96/192/256/384/512) on model prediction accuracy.
+              Provide historical data of a specified length and return the expected number of prediction points (output_length).
+
+Test Principle: Vary the input_length (96/192/256/384/512) and compare changes in MAE/RMSE.
 
 Author: Janesong
-Create Date: 2026/06/29, Updated on 2026/07/14.
+Create Date: 2026/06/29, Updated on 2026/08/14.
 """
 
-import os
-import sys
 import time
-from pathlib import Path
-
 import numpy as np
 import pandas as pd
 
-# ============================================================
-# 0. 路径配置与导入
-# ============================================================
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(PROJECT_ROOT))
-
+from config.settings import OUTPUT_DIR
 from config.constants import FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.files import save_to_csv
 
-SCRIPT_DIR = Path(__file__).parent
-RESULT_CSV_PATH = SCRIPT_DIR / "input_length_result.csv"
-
 # ============================================================
-# 1. 生成合成数据(与脏数据测试同源, 保证可比性)
+# 0. Data related configuration
 # ============================================================
-print("📦 生成合成数据...")
-np.random.seed(42)
-TOTAL = 512 + 64  # 512(最大input) + 64(forecast) = 576
-dates = pd.date_range("2024-01-01", periods=TOTAL, freq="1h")
-trend = np.linspace(50, 80, TOTAL)
-seasonal = 15 * np.sin(2 * np.pi * np.arange(TOTAL) / 24)
-noise = np.random.randn(TOTAL) * 2
-target = trend + seasonal + noise
+OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "inputLength"
+OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+RESULT_CSV_PATH = OUTPUT_SUBDIR / "input_length_result.csv"    # Prediction results file
 
-df = pd.DataFrame({"time": dates, "target": target.round(4)})
-
-# 真实值(最后 64 点, 作为 ground truth)
-ground_truth = df.iloc[-64:]["target"].values
-FORECAST_LEN = FORECAST_POINT_LEN_64
-
-# ============================================================
-# 2. 消融测试配置
-# ============================================================
+# List of historical input lengths under test
 INPUT_LENGTHS = [96, 192, 256, 384, 512]
 MODELS = ["Timer-3.5", "Chronos-2"]
 
-# ============================================================
-# 3. 逐模型 × 逐长度 测试
-# ============================================================
-total_calls = len(MODELS) * len(INPUT_LENGTHS)
-print(f"🚀 消融测试: {len(MODELS)} 模型 × {len(INPUT_LENGTHS)} 长度 = {total_calls} 次调用")
-print("=" * 80)
+np.random.seed(42)
 
-all_results = []
 
-for model_id in MODELS:
-    print(f"\n📋 模型: {model_id}")
+# ============================================================
+# 1. Generate synthetic data (same source as the dirty-data test to ensure comparability)
+# ============================================================
+def generate_synthetic_data(total_points: int = 576) -> pd.DataFrame:
+    """
+    Generate synthetic time-series data (trend + seasonality + noise).
     
-    for in_len in INPUT_LENGTHS:
-        # 截取历史数据: 取最后 in_len+FORECAST_LEN 行的前 in_len 行
-        history = df.iloc[-(in_len + FORECAST_LEN):-FORECAST_LEN][["time", "target"]].copy()
-        
-        t0 = time.perf_counter()
-        try:
-            # 调用 core 层的封装方法, 它内部会调用 utils.client.get_timecho_client()
-            pred_values, elapsed_ms, error = forecast(
-                targets=history,
-                model_id=model_id,
-                output_length=FORECAST_LEN,
-                time_col="time",
-                auto_adapt=True,
-            )
-            
-            if error:
-                print(f"  input={in_len:>3d} | ❌ 失败: {str(error)[:80]}")
+    Args:
+        total_points: Total number of data points, default 576 (512 max input + 64 forecast).
+    
+    Returns:
+        DataFrame with columns: time, target
+    """
+    dates = pd.date_range("2026-08-14", periods=total_points, freq="1h")
+    trend = np.linspace(50, 80, total_points)
+    seasonal = 15 * np.sin(2 * np.pi * np.arange(total_points) / 24)
+    noise = np.random.randn(total_points) * 2
+    target = trend + seasonal + noise
+
+    return pd.DataFrame({"time": dates, "target": target.round(4)})
+
+
+# ============================================================
+# 2. Main Test Flow
+# ============================================================
+def run_input_length_test() -> list:
+    """
+    Execute the main logic of the input_length ablation test.
+
+    Returns:
+        A list containing all test results.
+    """
+    # 1. Generate synthetic data
+    print(" Generating synthetic data...")
+    total_points = max(INPUT_LENGTHS) + FORECAST_POINT_LEN_64  # 512 + 64 = 576
+    df = generate_synthetic_data(total_points)
+
+    # Ground truth (last 64 points)
+    forecast_len = FORECAST_POINT_LEN_64
+    ground_truth = df.iloc[-forecast_len:]["target"].values
+
+    # 2. Iterate over models and input lengths
+    total_calls = len(MODELS) * len(INPUT_LENGTHS)
+    print(f" Ablation test: {len(MODELS)} models * {len(INPUT_LENGTHS)} lengths = {total_calls} calls")
+    print("=" * 80)
+
+    all_results = []
+
+    for model_id in MODELS:
+        print(f"\n Model: {model_id}")
+
+        for in_len in INPUT_LENGTHS:
+            # Slice historical data: take the first in_len rows of the last (in_len + forecast_len) rows
+            history = df.iloc[-(in_len + forecast_len):-forecast_len][["time", "target"]].copy()
+
+            t0 = time.perf_counter()
+            try:
+                # Invoke the core-layer wrapper, which internally calls utils.client.get_timecho_client()
+                pred_values, elapsed_ms, error = forecast(
+                    targets=history,
+                    model_id=model_id,
+                    output_length=forecast_len,
+                    time_col="time",
+                    auto_adapt=True,
+                )
+
+                if error:
+                    print(f"  input={in_len:>3d} | Failed: {str(error)[:80]}")
+                    all_results.append({
+                        "model_id": model_id, "input_length": in_len,
+                        "mae": None, "rmse": None, "latency_ms": elapsed_ms,
+                        "success": False, "error": str(error)
+                    })
+                else:
+                    mae = float(np.mean(np.abs(pred_values - ground_truth)))
+                    rmse = float(np.sqrt(np.mean((pred_values - ground_truth) ** 2)))
+
+                    print(f"  input={in_len:>3d} | MAE={mae:.4f} | RMSE={rmse:.4f} | latency={elapsed_ms:.0f}ms")
+
+                    all_results.append({
+                        "model_id": model_id, "input_length": in_len,
+                        "mae": mae, "rmse": rmse, "latency_ms": elapsed_ms,
+                        "success": True, "error": None
+                    })
+            except Exception as e:
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+                print(f"  input={in_len:>3d} | Exception: {str(e)[:80]}")
                 all_results.append({
                     "model_id": model_id, "input_length": in_len,
                     "mae": None, "rmse": None, "latency_ms": elapsed_ms,
-                    "success": False, "error": str(error)
+                    "success": False, "error": str(e)
                 })
-            else:
-                mae = float(np.mean(np.abs(pred_values - ground_truth)))
-                rmse = float(np.sqrt(np.mean((pred_values - ground_truth) ** 2)))
-                
-                print(f"  input={in_len:>3d} | MAE={mae:.4f} | RMSE={rmse:.4f} | 耗时={elapsed_ms:.0f}ms")
-                
-                all_results.append({
-                    "model_id": model_id, "input_length": in_len,
-                    "mae": mae, "rmse": rmse, "latency_ms": elapsed_ms,
-                    "success": True, "error": None
-                })
-        except Exception as e:
-            elapsed_ms = (time.perf_counter() - t0) * 1000
-            print(f"  input={in_len:>3d} | ❌ 异常: {str(e)[:80]}")
-            all_results.append({
-                "model_id": model_id, "input_length": in_len,
-                "mae": None, "rmse": None, "latency_ms": elapsed_ms,
-                "success": False, "error": str(e)
-            })
-        
-        time.sleep(1)
 
-# ============================================================
-# 4. 汇总打印
-# ============================================================
-print("\n" + "=" * 80)
-print("📊 消融测试汇总")
-print("=" * 80)
-print(f"  {'模型':>12s} | {'input_len':>9s} | {'MAE':>10s} | {'RMSE':>10s} | {'耗时(ms)':>8s}")
-print(f"  {'─'*12}─┼─{'─'*9}─┼─{'─'*10}─┼─{'─'*10}─┼─{'─'*8}")
+            time.sleep(1)
 
-for r in all_results:
-    if r["success"]:
-        print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['latency_ms']:>8.0f}")
-    else:
-        print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>8s}")
+    return all_results
 
-# ============================================================
-# 5. 保存结果
-# ============================================================
-result_path = save_to_csv(RESULT_CSV_PATH, all_results)
-print(f"   💾 结果已保存: {result_path}")
-print("=" * 80)
-print("测试完成！")
+
+def print_summary(all_results: list) -> None:
+    """Print the summary of results."""
+    print("\n" + "=" * 80)
+    print(" Ablation Test Summary")
+    print("=" * 80)
+    print(f"  {'Model':>12s} | {'input_len':>9s} | {'MAE':>10s} | {'RMSE':>10s} | {'Latency(ms)':>12s}")
+    print(f"  {'─'*12}─┼─{'─'*9}─┼─{'─'*10}─┼─{'─'*10}─┼─{'─'*12}")
+
+    for r in all_results:
+        if r["success"]:
+            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['latency_ms']:>12.0f}")
+        else:
+            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>12s}")
+
+
+def main():
+    """Main entry function."""
+    # Run the test
+    all_results = run_input_length_test()
+
+    # Print summary
+    print_summary(all_results)
+
+    # Save Results
+    print("=" * 80)
+    csv_path = save_to_csv(RESULT_CSV_PATH, all_results)
+    print(f"\nDetailed results saved to CSV: {csv_path}")
+    print(" Test completed!")
+    print("=" * 80)
+
+if __name__ == "__main__":
+    main()
