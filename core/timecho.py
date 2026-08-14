@@ -135,24 +135,28 @@ def forecast(
 # ============================================================
 
 def calc_metrics(
-    pred: np.ndarray | None,
-    truth: np.ndarray,
+    predictions: np.ndarray | None,
+    ground_truth: np.ndarray,
 ) -> dict[str, float | None]:
     """
     Calculate MAE / RMSE / MAPE.
 
     Args:
-        pred: Prediction values
-        truth: Ground truth values
+        predictions: Prediction values
+        ground_truth: Ground truth values
 
     Returns:
         {"MAE": ..., "RMSE": ..., "MAPE": ...}
+        MAE: Mean Absolute Error
+        RMSE: Root Mean Squared Error
+        MAPE: Mean Absolute Percentage Error
     """
-    if pred is None:
+    if predictions is None:
         return {"MAE": None, "RMSE": None, "MAPE": None}
-    mae = float(np.mean(np.abs(pred - truth)))
-    rmse = float(np.sqrt(np.mean((pred - truth) ** 2)))
-    mape = float(np.mean(np.abs((pred - truth) / truth)) * 100)
+
+    mae = float(np.mean(np.abs(predictions - ground_truth)))
+    rmse = float(np.sqrt(np.mean((predictions - ground_truth) ** 2)))
+    mape = float(np.mean(np.abs((predictions - ground_truth) / ground_truth)) * 100)
     return {"MAE": mae, "RMSE": rmse, "MAPE": mape}
 
 
