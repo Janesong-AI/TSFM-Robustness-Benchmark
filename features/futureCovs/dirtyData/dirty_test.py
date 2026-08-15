@@ -77,7 +77,7 @@ print(f"   ground_truth: {len(ground_truth)} 个点")
 print(f"   ground_truth range: {ground_truth.min():.2f} ~ {ground_truth.max():.2f}")
 print()
 
-def make_base_record(model_id, csv_file, nan_count, ground_truth):
+def _make_base_record(model_id, csv_file, nan_count, ground_truth):
     """创建 base_record,确保列顺序固定"""
     return {
         "model_id": model_id,
@@ -130,7 +130,7 @@ for model_id in MODEL_LIST:
         data_range = f"{valid_vals.min():.1f}~{valid_vals.max():.1f}" if len(valid_vals) > 0 else "全NaN"
         print(f"     历史 target: NaN={nan_count}, 范围={data_range}")
 
-        scene_base = make_base_record(model_id, csv_file, nan_count, ground_truth)
+        scene_base = _make_base_record(model_id, csv_file, nan_count, ground_truth)
 
         # ===== 两轮测试: 原始 + 预处理后 =====
         for pass_name, pass_df in [("原始", history.copy()), ("预处理", history.copy())]:
