@@ -3,11 +3,35 @@
 """
 concept_drift_test_v2.py —— 概念漂移测试(XYZ场景,修正版)
 ====================================
-工业背景:
-  设备启停、负载阶跃、季节性工况切换会导致训练数据与预测目标分布不一致.
-  这是工业时序预测的首要痛点.
+Industrial Context: 工业背景
+  Equipment start-stop cycles, load steps, and seasonal operating condition switches cause inconsistencies between 
+  training data and prediction target distributions. It is necessary to evaluate the model's resistance to distribution drift.
+  设备启停、负载阶跃、季节性工况切换会导致训练数据与预测目标分布不一致. 需要评估模型对分布漂移的抵抗力.
 
-测试目的:
+Test Principle: 测试原理
+  Compare prediction accuracy across different drift visibility conditions.
+  1. Drift Modes: Mean shift, Variance expansion, Phase shift, Covariate signal.
+  2. Drift Visibility: Invisible (X), Partially visible (Y), Covariate-driven (Z).
+  3. Context Lengths: 96, 256, 512.
+  对比不同漂移可见性条件下的预测精度差异
+  1. 漂移模式: 均值漂移、方差扩张、相位偏移、协变量传递
+  2. 漂移可见性: 不可见(X)、部分可见(Y)、协变量驱动(Z)
+  3. 上下文长度: 96, 256, 512
+
+
+Test Method: 测试方法
+  1. Generate base stationary signal (Training segment).
+  2. Generate drifted signal (Forecast segment) with X/Y/Z visibility.
+  3. Call prediction interface, calculate evaluation metrics.
+  4. Save prediction results.
+  1. 生成基础平稳信号(训练段)
+  2. 生成漂移信号(预测段), 区分X/Y/Z可见性
+  3. 调用预测接口, 计算评估指标
+  4. 保存预测结果
+
+Test Objective: 测试目的
+  Construct data with a stationary training segment and a prediction segment exhibiting distribution drift to test 
+  the model's resistance to three typical drift modes. Verify whether a long context window becomes a burden under drift conditions.
   构造训练段平稳、预测段发生分布漂移的数据, 检验模型对三种典型漂移
   模式的抵抗力, 并验证长上下文窗口在漂移下是否反而是负担.
 
@@ -25,11 +49,13 @@ concept_drift_test_v2.py —— 概念漂移测试(XYZ场景,修正版)
   2. 方差倍率定义: 使用 sqrt(multiplier) 计算标准差倍率, 确保方差扩张符合预期.
   3. Y类历史构造: 显式分离趋势/季节/噪声, 避免均值下移的伪漂移.
 
-调用次数:
-  主测试(XYZ): 6 模型 * 11 场景 * 3 长度 = 198 次.
-  消融测试(Y4 auto_adapt): 6 模型 * 2 开关 * 3 长度 = 36 次.
-  扣除不支持协变量的 12 次(NO_COV 跳过).
-  扣除消融去重 18 次(Y4/adapt=True 与主测试重复).
+
+Total calls 调用次数:
+  主测试(XYZ): 11 场景 * 6 模型 * 3 长度 = 198 次
+  消融测试(Y4 auto_adapt): 6 模型 * 2 开关 * 3 长度 = 36 次
+  跳过项:
+    - Z场景 * 不支持协变量模型(NO_COV): 2场景 * 2模型 * 3长度 = 12次
+    - 消融去重(Y4/adapt=True重复): 6模型 * 1开关 * 3长度 = 18次
   原始任务总数 234 次, 实际需完成 204 次.
 
 Author: Janesong
@@ -53,8 +79,8 @@ OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2.csv"
 
 N_CONTEXT = CONTEXT_LENGTH_512      # 上下文窗口总长度(历史段)
-N_FORECAST = FORECAST_POINT_LEN_64  # 预测长度 64
-N_TOTAL = N_CONTEXT + N_FORECAST    # 总计长度 576
+N_FORECAST = FORECAST_POINT_LEN_64  # Forecast length (64 points) 预测长度(64)
+N_TOTAL = N_CONTEXT + N_FORECAST    # Total sequence length 序列总长度 576
 
 NO_COV_MODELS = {"Timer-3.5", "Timer-3.0"}     # 不支持协变量的模型列表(Z类场景直接跳过)
 
@@ -88,6 +114,7 @@ TOTAL_RAW = 11 * 6 * 3 + 6 * 2 * 3  # = 234
 NO_COV_SKIP_COUNT = 2 * len(NO_COV_MODELS) * len(INPUT_LENGTHS)  # = 12
 # 消融测试中 Y4/adapt=True 与主测试完全重复 = 6模型*1*3长度 = 18
 DEDUP_SKIP_COUNT = 6 * 1 * len(INPUT_LENGTHS)  # = 18
+
 
 # ============================================================
 # 2. 信号生成与场景构造
@@ -273,7 +300,13 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     t0 = time.perf_counter()
 
     try:
-        kwargs = dict(targets=targets_df, model_id=model_id, output_length=N_FORECAST, time_col="time", auto_adapt=auto_adapt)
+        kwargs = dict(
+            targets=targets_df,
+            model_id=model_id,
+            output_length=N_FORECAST,
+            time_col="time",
+            auto_adapt=auto_adapt
+        )
         if history_covs_df is not None:
             kwargs["history_covs"] = history_covs_df
         if future_covs_df is not None:
