@@ -58,7 +58,7 @@ import pandas as pd
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
 from core.resume import load_results, append_result, is_rate_limited
-from core.timecho import forecast
+from core.timecho import forecast, calc_metrics
 
 # ============================================================
 # 1. Data related configuration
@@ -252,10 +252,6 @@ def build_scenarios():
 # ============================================================
 # 3. 执行预测与评估
 # ============================================================
-def compute_metrics(pred, target):
-    """计算 MAE 和 RMSE."""
-    return {"mae": float(np.mean(np.abs(pred - target))), "rmse": float(np.sqrt(np.mean((pred - target) ** 2)))}
-
 def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     """
     执行单次预测, 正确处理协变量的传递:
@@ -298,20 +294,20 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
             return {
                 "scenario_id": scenario["scenario_id"], "category": scenario["category"], "label": scenario["label"],
                 "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(error),
-                "mae": None, "rmse": None, "latency_ms": elapsed_ms, "ablation": False
+                "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms, "ablation": False
             }
 
-        m = compute_metrics(pred_values, target)
+        m = calc_metrics(pred_values, target)
         return {
             "scenario_id": scenario["scenario_id"], "category": scenario["category"], "label": scenario["label"],
             "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None,
-            "mae": m["mae"], "rmse": m["rmse"], "latency_ms": elapsed_ms, "ablation": False
+            "mae": m["mae"], "rmse": m["rmse"], "mape": m["MAPE"], "latency_ms": elapsed_ms, "ablation": False
         }
     except Exception as e:
         return {
             "scenario_id": scenario["scenario_id"], "category": scenario["category"], "label": scenario["label"],
             "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(e)[:120],
-            "mae": None, "rmse": None, "latency_ms": (time.perf_counter() - t0) * 1000, "ablation": False
+            "mae": None, "rmse": None, "mape": None, "latency_ms": (time.perf_counter() - t0) * 1000, "ablation": False
         }
 
 
@@ -321,7 +317,7 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 scenarios = build_scenarios()
 completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
 
-completed_keys = set()
+completed_keys = set()  # 构建 completed_keys: 成功 + 永久失败(非限流错误)
 for record in completed_records:
     aa_val = str(record.get("auto_adapt", True)).strip() == "True"
     key = (str(record["scenario_id"]), str(record["model_id"]), int(record["input_length"]), aa_val)

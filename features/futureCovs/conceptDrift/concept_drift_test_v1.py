@@ -33,7 +33,7 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, TRAIN_SEQ_LEN_512
-from core.timecho import forecast
+from core.timecho import forecast, calc_metrics
 from utils.files import save_to_csv
 
 # ============================================================
@@ -192,17 +192,16 @@ for mode in SCENARIOS:
                     print(f"      [{model_id}] Failed: {str(error)[:60]}")
                     all_results.append({
                         "scenario": mode, "model_id": model_id, "input_length": in_len,
-                        "mae": None, "rmse": None, "latency_ms": elapsed_ms,
+                        "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms,
                         "success": False, "error": str(error),
                         "contains_drift": contains_drift,
                     })
                 else:
-                    mae = float(np.mean(np.abs(pred_values - target_forecast)))
-                    rmse = float(np.sqrt(np.mean((pred_values - target_forecast) ** 2)))
-                    print(f"      [{model_id}] MAE={mae:.4f}  RMSE={rmse:.4f}  Latency={elapsed_ms:.0f}ms")
+                    metrics = calc_metrics(pred_values, target_forecast)
+                    print(f"      [{model_id}] MAE={metrics['MAE']:.4f}  RMSE={metrics['RMSE']:.4f}  MAPE={metrics['MAPE']:.4f}  Latency={elapsed_ms:.0f}ms")
                     all_results.append({
                         "scenario": mode, "model_id": model_id, "input_length": in_len,
-                        "mae": mae, "rmse": rmse, "latency_ms": elapsed_ms,
+                        "mae": metrics["MAE"], "rmse": metrics["RMSE"], "mape": metrics["MAPE"], "latency_ms": elapsed_ms,
                         "success": True, "error": None,
                         "contains_drift": contains_drift,
                     })
@@ -211,7 +210,7 @@ for mode in SCENARIOS:
                 print(f"      [{model_id}] Exception: {str(e)[:60]}")
                 all_results.append({
                     "scenario": mode, "model_id": model_id, "input_length": in_len,
-                    "mae": None, "rmse": None, "latency_ms": elapsed_ms,
+                    "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms,
                     "success": False, "error": str(e),
                     "contains_drift": contains_drift,
                 })

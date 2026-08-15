@@ -69,7 +69,7 @@ import pandas as pd
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
 from core.resume import load_results, append_result, is_rate_limited
-from core.timecho import forecast
+from core.timecho import forecast, calc_metrics
 
 # ============================================================
 # 1. Data related configuration
@@ -278,10 +278,6 @@ def build_scenarios():
 # ============================================================
 # 3. 执行预测与评估
 # ============================================================
-def compute_metrics(pred, target):
-    """计算 MAE 和 RMSE."""
-    return {"mae": float(np.mean(np.abs(pred - target))), "rmse": float(np.sqrt(np.mean((pred - target) ** 2)))}
-
 def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     # 提取 targets (必须包含 time 和 target)
     targets_df = scenario["history"][["time", "target"]].iloc[-in_len:].copy()
@@ -315,12 +311,12 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
         pred_values, elapsed_ms, error = forecast(**kwargs)
 
         if error:
-            return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(error), "mae": None, "latency_ms": elapsed_ms}
+            return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(error), "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms}
         
-        m = compute_metrics(pred_values, target)
-        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None, "mae": m["mae"], "rmse": m["rmse"], "latency_ms": elapsed_ms}
+        m = calc_metrics(pred_values, target)
+        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None, "mae": m["MAE"], "rmse": m["RMSE"], "mape": m["MAPE"], "latency_ms": elapsed_ms}
     except Exception as e:
-        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(e)[:120], "mae": None, "latency_ms": (time.perf_counter()-t0)*1000}
+        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(e)[:120], "mae": None, "rmse": None, "mape": None, "latency_ms": (time.perf_counter()-t0)*1000}
 
 
 # ============================================================
