@@ -1,7 +1,7 @@
 """
 forecast_horizon_ablation.py -- 预测步长消融实验
 ====================================
-原理: 固定输入长度,改变预测步长,观察精度变化
+测试原理: 固定输入长度,改变预测步长,观察精度变化
 
 测试目的:
   固定输入长度 512, 逐步增大 output_length (16->32->64->128->256),
@@ -109,8 +109,8 @@ def run_forecast_experiments(df_history, gt_normal, gt_drift):
                         "pred_len": len(pred)
                     }
                     print(f"    L={L:>3d}  MAE={mae:.4f}  (pred_len={len(pred)})")
-                except Exception as e:
-                    print(f"    L={L:>3d}  失败: {type(e).__name__}: {e}")
+                except Exception as exp:
+                    print(f"    L={L:>3d}  失败: {type(exp).__name__}: {exp}")
                     results[scenario][model_id][L] = {"mae": None, "step_mae": None, "pred_len": 0}
 
         print()

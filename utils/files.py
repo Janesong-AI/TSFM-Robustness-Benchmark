@@ -114,9 +114,9 @@ def save_to_csv(
             header=header,
             **kwargs
         )
-    except Exception as e:
-        raise CSVFileError(f"Failed to save CSV file: {file_path}\nError: {e}")
-    
+    except Exception as exp:
+        raise CSVFileError(f"Failed to save CSV file: {file_path}\nError: {exp}")
+
     return file_path
 
 
@@ -239,8 +239,8 @@ def read_csv_to_dataframe(
     try:
         df = pd.read_csv(file_path, encoding=encoding, **kwargs)
         return df
-    except Exception as e:
-        raise CSVFileError(f"Failed to read CSV file: {file_path}\nError: {e}")
+    except Exception as exp:
+        raise CSVFileError(f"Failed to read CSV file: {file_path}\nError: {exp}")
 
 
 def read_csv_to_list(

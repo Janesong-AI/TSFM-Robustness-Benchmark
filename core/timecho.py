@@ -117,17 +117,17 @@ def forecast(
         elapsed_ms = (time.perf_counter() - t0) * 1000
         pred_values = extract_pred_values(result[0])
         return pred_values, elapsed_ms, None
-    except Exception as e:
-        if hasattr(e, 'response'):
-            resp = e.response
+    except Exception as exp:
+        if hasattr(exp, 'response'):
+            resp = exp.response
             print(f"Status Code: {resp.status_code}")
             print(f"Retry-After: {resp.headers.get('Retry-After', 'Not returned')}")
         else:
-            print(f"Exception Type: {type(e)}")
+            print(f"Exception Type: {type(exp)}")
             # print(f"Exception Attributes: {dir(e)}")
-            print(f"Exception Message: {e}")
+            print(f"Exception Message: {exp}")
         elapsed_ms = (time.perf_counter() - t0) * 1000
-        return None, elapsed_ms, str(e)
+        return None, elapsed_ms, str(exp)
 
 
 # ============================================================

@@ -3,8 +3,8 @@
 """
 cov_test_models.py —— Covariate Support Test (Iterate All Models)
 
-Purpose: Find out which models truly support covariates and which don't
-Principle: Pass "real covariates" to each model and see who reports errors and who can use them
+Test Purpose: Find out which models truly support covariates and which don't
+Test Principle: Pass "real covariates" to each model and see who reports errors and who can use them
 
 Author: Janesong
 Create Date: 2026/06/30, Update on 2026/07/19.
@@ -93,9 +93,8 @@ for model_id in MODEL_LIST:
         if is_cov_not_supported:
             print(f"     Covariates not supported (422 error)")
             print(f"     Error message: {error[:100]}...")
-
         else:
-            print(f"     [warning] Other error: {error[:120]}")
+            print(f"     [Warning] Other error: {error[:120]}")
 
         results.append({
             "model_id": model_id,         # Model identifier

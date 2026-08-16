@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-concept_drift_test_v2_error.py —— 概念漂移测试(XYZ场景) 
+concept_drift_test_v2_error.py —— Concept Drift Test (XYZ Scenario, Error Report) 概念漂移测试(XYZ场景) 
 ====================================
-Industrial Context: 工业背景
+Industrial Context:
   Equipment start-stop cycles, load steps, and seasonal operating condition switches cause inconsistencies between 
   training data and prediction target distributions. It is necessary to evaluate the model's resistance to distribution drift.
   设备启停、负载阶跃、季节性工况切换会导致训练数据与预测目标分布不一致. 需要评估模型对分布漂移的抵抗力.
 
-Test Principle: 测试原理
+Test Principle:
   Compare prediction accuracy across different drift visibility conditions.
   1. Drift Modes: Mean shift, Variance expansion, Phase shift, Covariate signal.
   2. Drift Visibility: Invisible (X), Partially visible (Y), Covariate-driven (Z).
@@ -18,7 +18,7 @@ Test Principle: 测试原理
   2. 漂移可见性: 不可见(X)、部分可见(Y)、协变量驱动(Z)
   3. 上下文长度: 96, 256, 512
 
-Test Method: 测试方法
+Test Method:
   1. Generate base stationary signal (Training segment).
   2. Generate drifted signal (Forecast segment) with X/Y/Z visibility.
   3. Call prediction interface, calculate evaluation metrics.
@@ -28,18 +28,27 @@ Test Method: 测试方法
   3. 调用预测接口, 计算评估指标
   4. 保存预测结果
 
-Test Objective: 测试目的
+Test Objective:
   Construct data with a stationary training segment and a prediction segment exhibiting distribution drift to test 
   the model's resistance to three typical drift modes. Verify whether a long context window becomes a burden under drift conditions.
   构造训练段平稳、预测段发生分布漂移的数据, 检验模型对三种典型漂移
   模式的抵抗力, 并验证长上下文窗口在漂移下是否反而是负担.
 
-脚本问题:
+Script Issues:
+  1. Incorrect variance multiplier definition: "Variance 3x" was actually implemented as Standard Deviation 3x.
+  2. X3/Y2 scenarios were mixed with sudden trend changes.
+  3. Bias in noise extraction for Y2 scenario: Partial trend differences were amplified as noise.
   1.方差倍率定义错误: "方差 3x"实际是标准差 3x
   2.X3/Y2场景混杂了趋势突变
   3.Y2场景噪声提取存在偏差: Y2 将部分趋势差值作为噪声进行了放大
 
-Total calls 调用次数:
+Total Calls:
+  Main Test (XYZ): 11 scenarios * 6 models * 3 lengths = 198 calls
+  Ablation Test (Y4 auto_adapt): 6 models * 2 switches * 3 lengths = 36 calls
+  Skipped Items:
+    - Z Scenarios * Models without covariate support (NO_COV): 2 scenarios * 2 models * 3 lengths = 12 calls
+    - Ablation Deduplication (Y4/adapt=True duplicate): 6 models * 1 switch * 3 lengths = 18 calls
+  Original Total Tasks: 234 calls, Actual Required: 204 calls.
   主测试(XYZ): 11 场景 * 6 模型 * 3 长度 = 198 次
   消融测试(Y4 auto_adapt): 6 模型 * 2 开关 * 3 长度 = 36 次
   跳过项:
@@ -83,12 +92,12 @@ BASE_SEASONAL_PERIOD = 24
 BASE_NOISE_STD = 2
 
 # 漂移参数
-DRIFT_MEAN_SHIFT = 15        # 均值平移幅度
-DRIFT_NOISE_MULTIPLIER = 3   # 方差扩张倍数
-DRIFT_PHASE_SHIFT = np.pi/2  # 相位偏移(90度)
+DRIFT_MEAN_SHIFT = 15           # 均值平移幅度
+DRIFT_NOISE_MULTIPLIER = 3      # 方差扩张倍数
+DRIFT_PHASE_SHIFT = np.pi/2     # 相位偏移(90度)
 
 # 漂移过渡区长度(在历史窗口末端逐步引入漂移, 模拟真实工况切换)
-DRIFT_RAMP_LEN = 64          # 最后 64 个历史点逐步过渡
+DRIFT_RAMP_LEN = 64             # 最后 64 个历史点逐步过渡
 
 INPUT_LENGTHS = [96, 256, 512]
 
@@ -303,10 +312,10 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
             "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None,
             "mae": m["mae"], "rmse": m["rmse"], "mape": m["MAPE"], "latency_ms": elapsed_ms, "ablation": False
         }
-    except Exception as e:
+    except Exception as exp:
         return {
             "scenario_id": scenario["scenario_id"], "category": scenario["category"], "label": scenario["label"],
-            "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(e)[:120],
+            "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(exp)[:120],
             "mae": None, "rmse": None, "mape": None, "latency_ms": (time.perf_counter() - t0) * 1000, "ablation": False
         }
 
@@ -558,7 +567,7 @@ remaining = total_needed - len(success_results)
 print(f"\n{'=' * 90}")
 print("最终汇总")
 print("=" * 90)
-print(f"  结果文件: {RESULT_CSV_PATH}")
+print(f" CSV results path: {RESULT_CSV_PATH}")
 print(f"  成功记录(去重): {len(success_results)} / 实际需完成: {total_needed}")
 print("-" * 90)
 print(f"  任务统计:")

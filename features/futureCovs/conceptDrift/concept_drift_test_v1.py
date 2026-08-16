@@ -205,13 +205,13 @@ for mode in SCENARIOS:
                         "success": True, "error": None,
                         "contains_drift": contains_drift,
                     })
-            except Exception as e:
+            except Exception as exp:
                 elapsed_ms = (time.perf_counter() - t0) * 1000
-                print(f"      [{model_id}] Exception: {str(e)[:60]}")
+                print(f"      [{model_id}] Exception: {str(exp)[:60]}")
                 all_results.append({
                     "scenario": mode, "model_id": model_id, "input_length": in_len,
                     "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms,
-                    "success": False, "error": str(e),
+                    "success": False, "error": str(exp),
                     "contains_drift": contains_drift,
                 })
 

@@ -37,7 +37,7 @@ if raw_path.startswith("./") or raw_path.endswith(".py") or "/" in raw_path:
     
     # Convert to module path
     # TSFM-Robustness-Benchmark/features/futureCovs/conceptDrift/test.py
-    # → features.futureCovs.conceptDrift.test
+    # -> features.futureCovs.conceptDrift.test
     rel_path = file_path.relative_to(PROJECT_ROOT)
     # Remove .py extension
     if rel_path.suffix == ".py":
@@ -59,9 +59,9 @@ try:
     module = importlib.import_module(module_path)
     if hasattr(module, 'main'):
         module.main()
-except ModuleNotFoundError as e:
+except ModuleNotFoundError as exp:
     print(f"\nError: Module {module_path} not found")
-    print(f"Details: {e}")
+    print(f"Details: {exp}")
     print("\nPossible reasons:")
     print("  1. Module path is incorrect")
     print("  2. Missing __init__.py file")

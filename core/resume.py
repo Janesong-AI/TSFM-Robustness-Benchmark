@@ -69,8 +69,8 @@ def load_results(result_csv_path_file: str) -> tuple[list[dict], int]:
             msg += f", Pending Retry (429): {retry_count}"
         print(msg)
         return all_records, perm_fail_count
-    except Exception as e:
-        print(f"  Failed to read {path.name}: {e}, will start from scratch. ")
+    except Exception as exp:
+        print(f"  Failed to read {path.name}: {exp}, will start from scratch. ")
         return [], 0
 
 

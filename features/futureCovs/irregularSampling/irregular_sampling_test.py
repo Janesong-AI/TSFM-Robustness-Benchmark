@@ -4,6 +4,14 @@
 irregular_sampling_test.py -- Irregular Sampling Robustness Test
 Scenario A: Variable Sampling Rate and Irregular Timestamp Test
 ====================================
+Industrial Context:
+  On-site industrial sensors do not sample at equal intervals. When aggregated 
+  by gateways and written to time-series databases, the following occurs:
+    - Timestamp jitter (clock drift)
+    - Out-of-order data arrival (network retransmission)
+    - Uneven sampling intervals (multi-source asynchronous aggregation)
+    - Periodic packet loss and delayed retransmission
+
 Test Objective:
   Verify that the SDK correctly handles the timestamp semantics of 'time_col', 
   rather than simply processing data based on row index order.
@@ -12,14 +20,6 @@ Test Objective:
       results across different timestamp scenarios should be identical.
     - If the SDK correctly interprets timestamps, variations in timestamps should 
       lead to differences in prediction results.
-
-Industrial Context:
-  On-site industrial sensors do not sample at equal intervals. When aggregated 
-  by gateways and written to time-series databases, the following occurs:
-    - Timestamp jitter (clock drift)
-    - Out-of-order data arrival (network retransmission)
-    - Uneven sampling intervals (multi-source asynchronous aggregation)
-    - Periodic packet loss and delayed retransmission
 
 Test Methodology:
     1. Keep the target value sequence completely consistent.
@@ -395,18 +395,18 @@ def run_irregular_sampling_test(
 
                 results.append(result)
             
-            except Exception as e:
+            except Exception as exp:
                 elapsed_ms = (time.perf_counter() - t0) * 1000
                 result = _make_test_result(
                     scenario, model_id, None, ground_truth,
-                    elapsed_ms, False, str(e)
+                    elapsed_ms, False, str(exp)
                 )
                 results.append(result)
 
                 if verbose:
-                    print(f"   [{model_id}] Exception: {str(e)[:80]}")
+                    print(f"   [{model_id}] Exception: {str(exp)[:80]}")
 
-            time.sleep(1)  # Rate limiting between API calls
+            time.sleep(1)
     
     # Step 3: Analyze timestamp usage
     analysis = _analyze_timestamp_usage(results)
@@ -486,9 +486,9 @@ def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> Non
 
         conclusion = model_analysis["conclusion"]
         if "ignore" in conclusion:
-            print(f"     [WARNING] {conclusion} -> SDK might ignore time_col and process by row index only")
+            print(f"     [Warning] {conclusion} -> SDK might ignore time_col and process by row index only")
         else:
-            print(f"     [PASS] {conclusion}")
+            print(f"     [Pass] {conclusion}")
     
     print(f"\nOverall Conclusion: {analysis['overall_conclusion']}")
 

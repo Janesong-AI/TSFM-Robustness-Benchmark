@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dirty_test.py —— Dirty Data Robustness Test
+dirty_test_v2.py —— Dirty Data Robustness Test
 ====================================
 
 测试目的: 验证模型对缺失值、异常尖峰的抵抗力
@@ -230,7 +230,6 @@ for model_id in MODEL_LIST:
                     append_result(str(RESULT_CSV_PATH), result_record)
 
                 else:
-                    # 使用 core/timecho.py 的 calc_metrics 计算精度指标
                     metrics = calc_metrics(pred_values, ground_truth)
                     mae = metrics["MAE"]
                     rmse = metrics["RMSE"]
@@ -264,8 +263,8 @@ for model_id in MODEL_LIST:
                     result_record = clean_nan_values(result_record)
                     append_result(str(RESULT_CSV_PATH), result_record)
 
-            except Exception as e:
-                error_msg = str(e)
+            except Exception as exp:
+                error_msg = str(exp)
 
                 # 判断是否为限流错误
                 if is_rate_limited(error_msg):
@@ -385,6 +384,7 @@ print()
 print("=" * 90)
 print(" Results File")
 print("=" * 90)
-print(f"   CSV结果路径: {RESULT_CSV_PATH}")
+print(f"   CSV results path: {RESULT_CSV_PATH}")
 print(" Test completed!")
 print("=" * 100)
+

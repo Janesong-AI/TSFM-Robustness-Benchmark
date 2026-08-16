@@ -3,6 +3,9 @@
 """
 frequency_mismatch_test.py -- Frequency Mismatch Test
 ====================================
+Industrial Scenarios:
+  - Signal period changes caused by equipment speed or production changes.
+  - Quantifying prediction degradation when the model is not updated timely.
 Test Objective:
   Training period is fixed at 24h, while prediction period shifts to 24h/12h/8h/48h
   to quantify performance degradation caused by training-prediction frequency inconsistency.
@@ -14,9 +17,6 @@ Test Principle:
      - Ground Truth period changes (12h/8h/48h).
   3. Performance Difference: Reflects "prediction degradation due to frequency mismatch".
 
-Industrial Scenarios:
-  - Signal period changes caused by equipment speed or production changes.
-  - Quantifying prediction degradation when the model is not updated timely.
 
 Input Data Characteristics:
   - Training Segment: 512 points, 1h sampling rate, 24h period sine wave + linear trend + noise
@@ -283,9 +283,9 @@ def run_frequency_mismatch_test():
                     "metrics": metrics
                 })
 
-            except Exception as e:
+            except Exception as exp:
                 import traceback
-                print(f"    {mode_name:<25s}  Failed: {type(e).__name__}: {str(e)}")
+                print(f"    {mode_name:<25s}  Failed: {type(exp).__name__}: {str(exp)}")
                 all_results.append([model_id, mode_name, cfg["period"], cfg["desc"]] + [None] * 6)
 
 

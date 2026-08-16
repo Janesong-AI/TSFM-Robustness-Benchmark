@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-concept_drift_test_v2.py —— 概念漂移测试(XYZ场景,修正版)
+concept_drift_test_v2.py —— Concept Drift Test (XYZ Scenario,Revised Version) 概念漂移测试(XYZ场景,修正版)
 ====================================
-Industrial Context: 工业背景
+Industrial Context:
   Equipment start-stop cycles, load steps, and seasonal operating condition switches cause inconsistencies between 
   training data and prediction target distributions. It is necessary to evaluate the model's resistance to distribution drift.
   设备启停、负载阶跃、季节性工况切换会导致训练数据与预测目标分布不一致. 需要评估模型对分布漂移的抵抗力.
 
-Test Principle: 测试原理
+Test Principle:
   Compare prediction accuracy across different drift visibility conditions.
   1. Drift Modes: Mean shift, Variance expansion, Phase shift, Covariate signal.
   2. Drift Visibility: Invisible (X), Partially visible (Y), Covariate-driven (Z).
@@ -18,8 +18,7 @@ Test Principle: 测试原理
   2. 漂移可见性: 不可见(X)、部分可见(Y)、协变量驱动(Z)
   3. 上下文长度: 96, 256, 512
 
-
-Test Method: 测试方法
+Test Method:
   1. Generate base stationary signal (Training segment).
   2. Generate drifted signal (Forecast segment) with X/Y/Z visibility.
   3. Call prediction interface, calculate evaluation metrics.
@@ -29,13 +28,20 @@ Test Method: 测试方法
   3. 调用预测接口, 计算评估指标
   4. 保存预测结果
 
-Test Objective: 测试目的
+Test Objective:
   Construct data with a stationary training segment and a prediction segment exhibiting distribution drift to test 
   the model's resistance to three typical drift modes. Verify whether a long context window becomes a burden under drift conditions.
   构造训练段平稳、预测段发生分布漂移的数据, 检验模型对三种典型漂移
   模式的抵抗力, 并验证长上下文窗口在漂移下是否反而是负担.
 
-特性:
+Key Features:
+  1. Automatically checks if concept_drift_result_v2.csv exists in the same directory.
+  2. If CSV exists: Reads records, skips completed tasks, and resumes from checkpoint.
+  3. If no CSV: Runs the full test suite from scratch.
+  4. Immediately appends and saves results after each call is completed.
+  5. 429 Rate Limit: Stops current run, does not decrement total count, retry allowed next time.
+  6. 422 Permanent Failure: Decrements total count, no retry, does not affect final analysis.
+  7. Timer-3.5/Timer-3.0 running Z-type scenarios: Skipped directly as they do not support covariates [422].
   1. 自动判断同级目录是否有 concept_drift_result_v2.csv
   2. 有 CSV: 读取记录, 跳过已完成, 走断点续跑
   3. 无 CSV: 从零开始跑全量
@@ -44,13 +50,21 @@ Test Objective: 测试目的
   6. 422 永久失败: 扣总数, 不再重试, 不影响最终分析
   7. Timer-3.5/Timer-3.0 跑 Z 类场景: 直接跳过, 因为不支持协变量【422】
 
-修正说明:(Fixed concept_drift_test_v2_error.py)
+Revision Notes (Fixed concept_drift_test_v2_error.py):
+  1. Future Trend Calculation: Maintains consistency with historical trend slope to eliminate error interference from sudden trend changes.
+  2. Variance Multiplier Definition: Uses sqrt(multiplier) to calculate the standard deviation multiplier, ensuring variance expansion meets expectations.
+  3. Y-Type History Construction: Explicitly separates trend/seasonality/noise to avoid pseudo-drift caused by mean downshift.
   1. 未来趋势计算: 历史趋势斜率保持一致, 排除趋势突变对误差的干扰.
   2. 方差倍率定义: 使用 sqrt(multiplier) 计算标准差倍率, 确保方差扩张符合预期.
   3. Y类历史构造: 显式分离趋势/季节/噪声, 避免均值下移的伪漂移.
 
-
-Total calls 调用次数:
+Total Calls:
+  Main Test (XYZ): 11 scenarios * 6 models * 3 lengths = 198 calls
+  Ablation Test (Y4 auto_adapt): 6 models * 2 switches * 3 lengths = 36 calls
+  Skipped Items:
+    - Z Scenarios * Models without covariate support (NO_COV): 2 scenarios * 2 models * 3 lengths = 12 calls
+    - Ablation Deduplication (Y4/adapt=True duplicate): 6 models * 1 switch * 3 lengths = 18 calls
+  Original Total Tasks: 234 calls, Actual Required: 204 calls.
   主测试(XYZ): 11 场景 * 6 模型 * 3 长度 = 198 次
   消融测试(Y4 auto_adapt): 6 模型 * 2 开关 * 3 长度 = 36 次
   跳过项:
@@ -95,7 +109,7 @@ BASE_NOISE_STD = 2
 
 # 漂移参数
 DRIFT_MEAN_SHIFT = 15           # 均值平移幅度
-DRIFT_VARIANCE_MULTIPLIER = 3   # 定义:方差扩张倍数
+DRIFT_VARIANCE_MULTIPLIER = 3   # 方差扩张倍数
 # 计算对应的标准差扩张倍数 (方差是标准差的平方)
 DRIFT_NOISE_STD_MULTIPLIER = np.sqrt(DRIFT_VARIANCE_MULTIPLIER)
 
@@ -105,6 +119,7 @@ DRIFT_PHASE_SHIFT = np.pi/2     # 相位偏移(90度)
 DRIFT_RAMP_LEN = 64             # 最后 64 个历史点逐步过渡
 
 INPUT_LENGTHS = [96, 256, 512]
+
 AUTO_ADAPT_ABLATION_SCENARIO = "Y4"
 AUTO_ADAPT_VALUES = [True, False]
 
@@ -242,7 +257,7 @@ def build_scenarios():
         "future_covs": future_cov_z1,
         "description": "cov signal"
     })
-    
+
     # Z2: 历史段末尾逐渐升高的协变量, 未来继续为全1
     def _safe_logspace(start, end, n):
         if start <= 0:
@@ -257,8 +272,9 @@ def build_scenarios():
         "time": DATES[:N_CONTEXT],
         "target": y_history_mean,
         "load_level": np.concatenate([
-          np.zeros(N_CONTEXT - DRIFT_RAMP_LEN),
-          _safe_logspace(0.01, 1.0, DRIFT_RAMP_LEN)])
+            np.zeros(N_CONTEXT - DRIFT_RAMP_LEN),
+            _safe_logspace(0.01, 1.0, DRIFT_RAMP_LEN)
+        ])
     })
     future_cov_z2 = pd.DataFrame({
         "time": DATES[N_CONTEXT:N_TOTAL],
@@ -281,7 +297,7 @@ def build_scenarios():
 def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     # 提取 targets (必须包含 time 和 target)
     targets_df = scenario["history"][["time", "target"]].iloc[-in_len:].copy()
-    
+
     # 提取历史协变量(如果存在除 time, target 之外的列)
     history_covs_df = None
     if len(scenario["history"].columns) > 2:
@@ -293,8 +309,8 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     # 未来协变量
     future_covs_df = scenario.get("future_covs")
     target = scenario["future_target"]
-    t0 = time.perf_counter()
 
+    t0 = time.perf_counter()
     try:
         kwargs = dict(
             targets=targets_df,
@@ -312,11 +328,11 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 
         if error:
             return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(error), "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms}
-        
+
         m = calc_metrics(pred_values, target)
         return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None, "mae": m["MAE"], "rmse": m["RMSE"], "mape": m["MAPE"], "latency_ms": elapsed_ms}
-    except Exception as e:
-        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(e)[:120], "mae": None, "rmse": None, "mape": None, "latency_ms": (time.perf_counter()-t0)*1000}
+    except Exception as exp:
+        return {"scenario_id": scenario["scenario_id"], "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": False, "error": str(exp)[:120], "mae": None, "rmse": None, "mape": None, "latency_ms": (time.perf_counter()-t0)*1000}
 
 
 # ============================================================

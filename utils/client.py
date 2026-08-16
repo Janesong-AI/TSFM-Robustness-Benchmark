@@ -78,9 +78,9 @@ def _warmup_client(client: TimechoAIClient) -> None:
     try:
         # Directly triggers Session creation without making any API calls.
         client._get_session()
-    except Exception as e:
+    except Exception as exp:
         # Warm-up failure does not block the execution flow.
-        print(f"[warning] SDK warm-up failed (ignorable): {type(e).__name__}")
+        print(f"[Warning] SDK warm-up failed (ignorable): {type(exp).__name__}")
         # Do not raise an exception; allows for subsequent retries.
 
 
@@ -155,10 +155,10 @@ def _warmup_async_client(client: TimechoAIAsyncClient) -> None:
         # Case 2: no running loop — create one just for warm-up.
         try:
             asyncio.run(_do_warmup())
-        except Exception as e:
-            print(f"[warning] Async SDK warm-up failed (ignorable): {type(e).__name__}")
-    except Exception as e:
-        print(f"[warning] Async SDK warm-up failed (ignorable): {type(e).__name__}")
+        except Exception as exp:
+            print(f"[Warning] Async SDK warm-up failed (ignorable): {type(exp).__name__}")
+    except Exception as exp:
+        print(f"[Warning] Async SDK warm-up failed (ignorable): {type(exp).__name__}")
 
 
 def reset_async_client() -> None:

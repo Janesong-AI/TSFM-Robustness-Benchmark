@@ -3,8 +3,9 @@
 """
 cov_test.py —— Covariate Validity Test
 
-Purpose: Verify if TimechoAI uses "future covariates"
-Principle: Pass different future_covs and check if prediction results differ
+Test Purpose: Verify if TimechoAI uses "future covariates"
+
+Test Principle: Pass different future_covs and check if prediction results differ
 
 Author: Janesong
 Create Date: 2026/06/29, Update on 2026/07/12.
@@ -178,7 +179,7 @@ for name, diff in diff_labels:
     if diff is None:
         print(f"{name:>30s} | {'N/A':>12s} | {'N/A':>20s}")
     elif diff < 0.5:
-        print(f"{name:>30s} | {diff:>12.4f} | {'[warning] Almost no difference':>20s}")
+        print(f"{name:>30s} | {diff:>12.4f} | {'[Warning] Almost no difference':>20s}")
     elif diff < 2.0:
         print(f"{name:>30s} | {diff:>12.4f} | {'  Weak influence':>20s}")
     else:
