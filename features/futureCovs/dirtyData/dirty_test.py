@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-dirty_test.py —— Dirty Data Robustness Test (NaN not supported)
+dirty_test.py —— Dirty Data Robustness Test (No NaN Support)
 ====================================
-测试目的: 验证模型对缺失值、异常尖峰的抵抗力
-作用: 测试模型对脏数据的鲁棒性
-原理: 用 7 种脏数据(含 baseline)分别预测, 对比精度退化程度
+Test Purpose: Validate model's robustness against missing values and anomalous spikes
 
-API限制: TimechoAI API 不支持 NaN 值输入(包括 target 和 cov 列)
+Test Principle: Predict using 7 types of dirty data (including baseline) and compare accuracy degradation
+
+API Limitation: TimechoAI API does not support NaN values input (including target and cov columns)
 
 Author: Janesong
 Create Date: 2026/06/29, Update on 2026/08/07.
@@ -34,51 +34,50 @@ OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction results file
 
 # ============================================================
-# 计算测试数量
+# Calculate test quantity
 # ============================================================
 completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
 
-completed_keys = set()  # 构建已完成测试的 key 集合 (model_id, scene, pass)
-retry_keys = set()      # 待重试的限流错误
+completed_keys = set()  # Build key set for completed tests (model_id, scene, pass)
+retry_keys = set()      # Rate limit errors pending retry
 for record in completed_records:
     key = (record.get("model_id"), record.get("scene"), record.get("pass"))
     if record.get("success") == True:
         completed_keys.add(key)
     elif is_rate_limited(str(record.get("error", ""))):
-        retry_keys.add(key)  # 限流错误, 加入重试集合
-    # 其他失败不计入 completed_keys, 会重新测试
+        retry_keys.add(key)  # Rate limit error, add to retry set
+    # Other failures not counted in completed_keys, will be retested
 
-# 7 个测试场景
+# 7 test scenarios
 SCENES = [
-    ("S0-干净",       "dirty_s0_clean.csv"),
-    ("S1-缺失5%",     "dirty_s1_miss5.csv"),
-    ("S2-缺失15%",    "dirty_s2_miss15.csv"),
-    ("S3-连续缺失",   "dirty_s3_miss_block.csv"),
-    ("S4-单点尖峰",   "dirty_s4_spike_single.csv"),
-    ("S5-多点尖峰",   "dirty_s5_spike_multi.csv"),
-    ("S6-混合脏",     "dirty_s6_mixed.csv"),
+    ("S0-Clean",       "dirty_s0_clean.csv"),
+    ("S1-Missing5%",     "dirty_s1_miss5.csv"),
+    ("S2-Missing15%",    "dirty_s2_miss15.csv"),
+    ("S3-ContinuousMissing",   "dirty_s3_miss_block.csv"),
+    ("S4-SingleSpike",   "dirty_s4_spike_single.csv"),
+    ("S5-MultiSpike",   "dirty_s5_spike_multi.csv"),
+    ("S6-MixedDirty",     "dirty_s6_mixed.csv"),
 ]
 
-total_tests = len(MODEL_LIST) * len(SCENES) * 2   # 原始 和 预处理两轮
+total_tests = len(MODEL_LIST) * len(SCENES) * 2   # Raw and Preprocessed passes
 skipped_tests = len(completed_keys)
 remaining_tests = total_tests - skipped_tests - perm_fail_count
 
-print(f"总任务: {total_tests} | 需完成: {remaining_tests} | 已完成: {skipped_tests} | 永久失败(Skip): {perm_fail_count}")
+print(f"Total tasks: {total_tests} | Remaining: {remaining_tests} | Completed: {skipped_tests} | Permanent failures(Skip): {perm_fail_count}")
 print()
 
-# Read data
-# 读取 ground truth (用干净数据的后 64 行作为真实值)
+# Read Data: ground truth (use last 64 rows of clean data as true values)
 print("  Reading data for ground truth...")
 clean_df = read_csv_to_dataframe(DATA_CSV_PATH)
 clean_df["time"] = pd.to_datetime(clean_df["time"])
 ground_truth = clean_df.iloc[HISTORY_POINT_LEN_256:]["target"].values
 future_cov = clean_df.iloc[HISTORY_POINT_LEN_256:][["time", "cov"]].copy()
-print(f"   ground_truth: {len(ground_truth)} 个点")
+print(f"   ground_truth: {len(ground_truth)} points")
 print(f"   ground_truth range: {ground_truth.min():.2f} ~ {ground_truth.max():.2f}")
 print()
 
 def _make_base_record(model_id, csv_file, nan_count, ground_truth):
-    """创建 base_record,确保列顺序固定"""
+    """Create base_record, ensure fixed column order"""
     return {
         "model_id": model_id,
         "scene": None,
@@ -99,82 +98,82 @@ def _make_base_record(model_id, csv_file, nan_count, ground_truth):
     }
 
 # ============================================================
-# 逐场景 * 逐模型 测试
+# Test by scene * model
 # ============================================================
 
-api_call_count = 0  # API 调用计数
+api_call_count = 0    # API call counter
 success_count = 0
 fail_count = 0
 
-print(f"🚀 开始测试...")
+print(f" Starting test...")
 print("=" * 90)
 
 for model_id in MODEL_LIST:
-    # 判断是否为单变量模型
+    # Determine if it's a univariate model
     is_univariate = model_id.startswith("Timer")
     print(f"\n{'─' * 90}")
-    print(f"📋 模型: {model_id} (单变量模式: {is_univariate})")
+    print(f" Model: {model_id} (Univariate mode: {is_univariate})")
     print(f"{'─' * 90}")
 
     for scene_name, csv_file in SCENES:
-        print(f"\n  🔍 场景: {scene_name} ({csv_file})")
+        print(f"\n   Scenario: {scene_name} ({csv_file})")
 
-        # 读取脏数据
+        # Read dirty data
         df = read_csv_to_dataframe(DATA_SUBDIR / csv_file)
         df["time"] = pd.to_datetime(df["time"])
 
         history = df.iloc[:HISTORY_POINT_LEN_256].copy()
-        # 检查脏数据概况
+        # Check dirty data overview
         nan_count = history["target"].isna().sum()
         valid_vals = history["target"].dropna()
-        data_range = f"{valid_vals.min():.1f}~{valid_vals.max():.1f}" if len(valid_vals) > 0 else "全NaN"
-        print(f"     历史 target: NaN={nan_count}, 范围={data_range}")
+        data_range = f"{valid_vals.min():.1f}~{valid_vals.max():.1f}" if len(valid_vals) > 0 else "All NaN"
+        print(f"     History target: NaN={nan_count}, Range={data_range}")
 
         scene_base = _make_base_record(model_id, csv_file, nan_count, ground_truth)
 
-        # ===== 两轮测试: 原始 + 预处理后 =====
-        for pass_name, pass_df in [("原始", history.copy()), ("预处理", history.copy())]:
+        # ===== Two passes: Raw + Preprocessed =====
+        for pass_name, pass_df in [("Raw", history.copy()), ("Preprocessed", history.copy())]:
             label = f"{scene_name}[{pass_name}]"
             test_key = (model_id, label, pass_name)
 
-            # 断点续跑: 检查是否已完成或待重试
+            # Resume from checkpoint: Check if completed or pending retry
             if test_key in completed_keys and test_key not in retry_keys:
-                # 已成功完成, 跳过
-                print(f"     [{pass_name}] 已完成, 跳过")
+                # Already successfully completed, skip
+                print(f"     [{pass_name}] Completed, skipped")
                 continue
 
-            # 如果是待重试的限流错误, 提示用户
+            # If rate-limited retry needed, notify user
             if test_key in retry_keys:
-                print(f"     [{pass_name}] 重试(之前429限流)")
+                print(f"     [{pass_name}] Retrying (previous 429 rate limit)")
             
-            # 无论原始还是预处理, 都填充协变量列的 NaN(避免 API 报错)
-            #  因为协变量列的 NaN 不是测试重点, 只是数据质量问题, 避免API报错
+            # Fill covariate NaNs in both passes to prevent API errors
+            # (Covariate NaNs are not the focus of this test and would cause API rejection)
             if not is_univariate and "cov" in pass_df.columns:
                 cov_nan_before = pass_df["cov"].isna().sum()
                 if cov_nan_before > 0:
                     pass_df["cov"] = pass_df["cov"].ffill().bfill()
                     cov_nan_after = pass_df["cov"].isna().sum()
-                    print(f"     [{pass_name}] 协变量列预处理: 填充 {cov_nan_before} 个NaN")
+                    print(f"     [{pass_name}] Covariate preprocessing: Filled {cov_nan_before} NaN values")
 
-            if pass_name == "预处理":
-                # 预处理轮:填充目标列的 NaN(测试模型对预处理后数据的预测能力)
+            if pass_name == "Preprocessed":
+                # Preprocessed pass: Fill target NaNs (test prediction capability on preprocessed data)
                 target_nan_before = pass_df["target"].isna().sum()
                 if target_nan_before > 0:
                     pass_df["target"] = pass_df["target"].ffill().bfill()
                     target_nan_after = pass_df["target"].isna().sum()
-                    print(f"     [{pass_name}] 目标列预处理: 填充 {target_nan_before} 个NaN")
+                    print(f"     [{pass_name}] Target preprocessing: Filled {target_nan_before} NaN values")
             else:
-                # 原始轮:保持目标列的 NaN(测试模型对缺失值的反应)
-                # 如果 API 不支持 NaN,会报错,这也是测试结果之一
+                # Raw pass: Keep target NaNs (test reaction to missing values)
+                # If API doesn't support NaN, it will error out, which is a valid test result
                 target_nan_count = pass_df["target"].isna().sum()
                 if target_nan_count > 0:
-                    print(f"     [{pass_name}] 目标列保持原始: {target_nan_count} 个NaN(测试缺失值鲁棒性)")
+                    print(f"     [{pass_name}] Target kept raw: {target_nan_count} NaN values (testing missing value robustness)")
 
             history_targets = pass_df[["time", "target"]]
             history_covs = pass_df[["time", "cov"]]
 
             try:
-                # 动态构建参数: 如果是 Timer 系列, 不传协变量
+                # Dynamically build parameters: If Timer series, don't pass covariates
                 forecast_kwargs = {
                     "targets": history_targets,
                     "model_id": model_id,
@@ -183,24 +182,23 @@ for model_id in MODEL_LIST:
                     "auto_adapt": True,
                 }
 
-                # 多变量模型才传协变量
+                # Multivariate models need covariates
                 if not is_univariate:
                     forecast_kwargs["history_covs"] = history_covs
                     forecast_kwargs["future_covs"] = future_cov
 
-                # 通过 core/timecho.py 的封装调用 API (间接使用 utils/client.py)
+                # Call API through core/timecho.py wrapper (indirectly uses utils/client.py)
                 api_call_count += 1
-                print(f"     [{pass_name}] API调用 #{api_call_count}...")
+                print(f"     [{pass_name}] API call #{api_call_count}...")
 
                 pred_values, elapsed_ms, error = forecast(**forecast_kwargs)
 
                 if error:
-                    
-                    # 判断是否为限流错误
+                    # Check if rate limit error
                     if is_rate_limited(error):
-                        print(f"     [{pass_name}] 限流(429), 已记录, 下次重试")
+                        print(f"     [{pass_name}] Rate limited (429), recorded, will retry next time")
                     else:
-                        print(f"     [{pass_name}] 失败: {error[:80]}")
+                        print(f"     [{pass_name}] Failed: {error[:80]}")
                     
                     fail_count += 1
 
@@ -216,22 +214,18 @@ for model_id in MODEL_LIST:
                     append_result(str(RESULT_CSV_PATH), result_record)
 
                 else:
-                    # 使用 core/timecho.py 的 calc_metrics 计算精度指标
                     metrics = calc_metrics(pred_values, ground_truth)
-                    mae = metrics["MAE"]
-                    rmse = metrics["RMSE"]
-                    mape = metrics["MAPE"]
 
-                    # 检测预测是否"起飞"或"雪崩"
+                    # Detect if prediction "exploded" or "collapsed"
                     pred_max = float(np.max(pred_values))
                     pred_min = float(np.min(pred_values))
                     truth_max = float(np.max(ground_truth))
                     truth_min = float(np.min(ground_truth))
                     is_explosion = pred_max > truth_max * 1.5 or pred_min < truth_min * 0.5
 
-                    status = "💥 起飞/雪崩!" if is_explosion else "✅ 正常"
-                    print(f"     [{pass_name}] {status} MAE={mae:.4f}, 范围={pred_min:.2f}~{pred_max:.2f}")
-                    
+                    status = " Explosion/Collapse!" if is_explosion else " Normal"
+                    print(f"     [{pass_name}] {status} MAE={metrics['MAE']:.4f}, RMSE={metrics['RMSE']:.4f},MAPE={metrics['MAPE']:.4f}, Range={pred_min:.2f}~{pred_max:.2f}")
+
                     success_count += 1
 
                     result_record = {
@@ -239,9 +233,9 @@ for model_id in MODEL_LIST:
                         "scene": label,
                         "pass": pass_name,
                         "success": True,
-                        "mae": mae,
-                        "rmse": rmse,
-                        "mape": mape,
+                        "mae": metrics["MAE"],
+                        "rmse": metrics["RMSE"],
+                        "mape": metrics["MAPE"],
                         "latency_ms": elapsed_ms,
                         "pred_min": pred_min,
                         "pred_max": pred_max,
@@ -250,15 +244,15 @@ for model_id in MODEL_LIST:
                     result_record = clean_nan_values(result_record)
                     append_result(str(RESULT_CSV_PATH), result_record)
 
-            except Exception as e:
-                error_msg = str(e)
+            except Exception as exp:
+                error_msg = str(exp)
 
-                # 判断是否为限流错误
+                # Check if rate limit error
                 if is_rate_limited(error_msg):
-                    print(f"     [{pass_name}] 限流(429), 已记录, 下次重试")
+                    print(f"     [{pass_name}] Rate limited (429), recorded, will retry next time")
                 else:
-                    print(f"     [{pass_name}] 失败: {error_msg[:80]}")
-                
+                    print(f"     [{pass_name}] Failed: {error_msg[:80]}")
+
                 fail_count += 1
 
                 result_record = {
@@ -275,73 +269,75 @@ for model_id in MODEL_LIST:
             time.sleep(1)
 
 # ============================================================
-# 测试统计
+# Test statistics
 # ============================================================
 print()
 print("=" * 90)
-print("测试统计")
-print(f"  API调用次数: {api_call_count} | 成功: {success_count} | 失败: {fail_count} | 跳过(已完成): {skipped_tests}")
+print("Test Statistics")
+print(f"   API calls: {api_call_count} | Success: {success_count} | Failed: {fail_count} | Skipped(completed): {skipped_tests}")
 print("=" * 90)
 
 # ============================================================
-# 读取完整结果并生成汇总报告
+# Read complete results and generate summary report
 # ============================================================
 print("=" * 90)
-print("读取完整结果, 生成汇总报告")
+print("Reading complete results, generating summary report")
 print("=" * 90)
 
-# 读取所有结果(包括之前完成的)
+# Read all results (including previously completed)
 results_data, _ = load_results(str(RESULT_CSV_PATH))
 
 print("\n" + "=" * 100)
-print("📋 鲁棒性分析结论")
+print(" Robustness Analysis Conclusion")
 print("=" * 100)
 
 for model_id in MODEL_LIST:
     model_results = [r for r in results_data if r["model_id"] == model_id]
     
     if len(model_results) == 0:
-        print(f"  [{model_id}] 无结果数据")
+        print(f"  [{model_id}] No result data")
         continue
     
     print(f"\n  【{model_id}】")
-    s0_pre = get_results(results_data, model_id, "S0", "预处理")
+    s0_pre = get_results(results_data, model_id, "S0", "Preprocessed")
     
     if not s0_pre or not s0_pre["success"]:
-        print(f"    [warning] 基准场景都失败了, 无法评估鲁棒性.")
+        print(f"    [Warning] Baseline scenario failed, unable to evaluate robustness.")
         continue
 
     baseline_mae = s0_pre["mae"]
-    print(f"    基准(S0干净[预处理]) MAE = {baseline_mae:.4f}")
+    print(f"    Baseline(S0-Clean[Preprocessed]) MAE = {baseline_mae:.4f}")
 
-    # 分析缺失值场景
-    print(f"\n    ▶ 缺失值抵抗力 (基于[预处理]结果):")
+    # Analyze missing value scenarios
+    print(f"\n     Missing Value Resistance (based on [Preprocessed] results):")
     for scene_prefix in ["S1", "S2", "S3"]:
-        r_pre = get_results(results_data, model_id, scene_prefix, "预处理")
-        r_raw = get_results(results_data, model_id, scene_prefix, "原始")
+        r_pre = get_results(results_data, model_id, scene_prefix, "Preprocessed")
+        r_raw = get_results(results_data, model_id, scene_prefix, "Raw")
+
+        # Raw pass results
         if r_raw and not r_raw["success"]:
-            print(f"      {r_raw['scene'].replace('[原始]',''):>14s} (原始): ❌ 报错 (不支持 NaN)")
+            print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): API doesn't support NaN input")
         if r_pre and r_pre["success"]:
             ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
-            verdict = "✅ 无影响" if ratio < 1.5 else ("🟡 轻微退化" if ratio < 3 else "🔴 明显退化")
-            print(f"      {r_pre['scene'].replace('[预处理]',''):>14s} (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
+            verdict = " No impact" if ratio < 1.5 else (" Slight degradation" if ratio < 3 else " Significant degradation")
+            print(f"      {r_pre['scene'].replace('[Preprocessed]',''):>14s} (Preprocessed): MAE={r_pre['mae']:.4f} ({ratio:.1f}x of baseline) -> {verdict}")
 
-    # 异常尖峰抵抗力
-    print(f"\n    ▶ 异常尖峰抵抗力 (基于[原始]结果):")
+    # Anomalous Spike Resistance
+    print(f"\n     Anomalous Spike Resistance (based on [Raw] results):")
     for scene_prefix in ["S4", "S5"]:
-        r_raw = get_results(results_data, model_id, scene_prefix, "原始")
+        r_raw = get_results(results_data, model_id, scene_prefix, "Raw")
         if r_raw and r_raw["success"]:
             ratio = r_raw["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
-            verdict = "💥 起飞/雪崩!" if r_raw["is_explosion"] else ("✅ 扛住了" if ratio < 1.5 else "[warning] 精度退化")
-            print(f"      {r_raw['scene'].replace('[原始]',''):>14s}: MAE={r_raw['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
+            verdict = " Explosion/Collapse!" if r_raw["is_explosion"] else (" Resisted" if ratio < 1.5 else "[Warning] Accuracy degradation")
+            print(f"      {r_raw['scene'].replace('[Raw]',''):>14s}: MAE={r_raw['mae']:.4f} ({ratio:.1f}x of baseline) -> {verdict}")
 
-    # 混合脏数据
-    print(f"\n    ▶ 混合脏数据 (基于[预处理]结果):")
-    r_pre = get_results(results_data, model_id, "S6", "预处理")
+    # Mixed Dirty Data
+    print(f"\n     Mixed Dirty Data (based on [Preprocessed] results):")
+    r_pre = get_results(results_data, model_id, "S6", "Preprocessed")
     if r_pre and r_pre["success"]:
         ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
-        verdict = "💥 起飞/雪崩!" if r_pre["is_explosion"] else ("✅ 工业可用" if ratio < 1.5 else "🔴 不可用")
-        print(f"      S6-混合脏 (预处理): MAE={r_pre['mae']:.4f} (基准的 {ratio:.1f}x) -> {verdict}")
+        verdict = " Explosion/Collapse!" if r_pre["is_explosion"] else (" Production-ready" if ratio < 1.5 else " Not usable")
+        print(f"      S6-MixedDirty (Preprocessed): MAE={r_pre['mae']:.4f} ({ratio:.1f}x of baseline) -> {verdict}")
     print()
 
 # ============================================================
@@ -350,6 +346,6 @@ for model_id in MODEL_LIST:
 print("=" * 90)
 print(" Results File")
 print("=" * 90)
-print(f"   CSV结果路径: {RESULT_CSV_PATH}")
+print(f"   CSV results path: {RESULT_CSV_PATH}")
 print(" Test completed!")
 print("=" * 90)
