@@ -20,7 +20,7 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import FORECAST_POINT_LEN_64
-from core.timecho import forecast
+from core.timecho import forecast, calc_metrics
 from utils.files import save_to_csv
 
 # ============================================================
@@ -46,7 +46,7 @@ def generate_synthetic_data(total_points: int = 576) -> pd.DataFrame:
     
     Args:
         total_points: Total number of data points, default 576 (512 max input + 64 forecast).
-    
+
     Returns:
         DataFrame with columns: time, target
     """
@@ -104,30 +104,28 @@ def run_input_length_test() -> list:
                 )
 
                 if error:
-                    print(f"  input={in_len:>3d} | Failed: {str(error)[:80]}")
+                    print(f"  [{model_id}] input={in_len:>3d} | Failed: {str(error)[:80]}")
                     all_results.append({
                         "model_id": model_id, "input_length": in_len,
-                        "mae": None, "rmse": None, "latency_ms": elapsed_ms,
+                        "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms,
                         "success": False, "error": str(error)
                     })
                 else:
-                    mae = float(np.mean(np.abs(pred_values - ground_truth)))
-                    rmse = float(np.sqrt(np.mean((pred_values - ground_truth) ** 2)))
+                    metrics = calc_metrics(pred_values, ground_truth)
 
-                    print(f"  input={in_len:>3d} | MAE={mae:.4f} | RMSE={rmse:.4f} | latency={elapsed_ms:.0f}ms")
-
+                    print(f"  [{model_id}] | input={in_len:>3d} | MAE={metrics['MAE']:.4f} | RMSE={metrics['RMSE']:.4f} | MAPE={metrics['MAPE']:.4f} | Latency={elapsed_ms:.0f}ms")
                     all_results.append({
                         "model_id": model_id, "input_length": in_len,
-                        "mae": mae, "rmse": rmse, "latency_ms": elapsed_ms,
+                        "mae": metrics["MAE"], "rmse": metrics["RMSE"], "mape": metrics["MAPE"], "latency_ms": elapsed_ms,
                         "success": True, "error": None
                     })
-            except Exception as e:
+            except Exception as exp:
                 elapsed_ms = (time.perf_counter() - t0) * 1000
-                print(f"  input={in_len:>3d} | Exception: {str(e)[:80]}")
+                print(f"  [{model_id}] input={in_len:>3d} | Exception: {str(exp)[:80]}")
                 all_results.append({
                     "model_id": model_id, "input_length": in_len,
-                    "mae": None, "rmse": None, "latency_ms": elapsed_ms,
-                    "success": False, "error": str(e)
+                    "mae": None, "rmse": None, "mape": None, "latency_ms": elapsed_ms,
+                    "success": False, "error": str(exp)
                 })
 
             time.sleep(1)
@@ -140,14 +138,14 @@ def print_summary(all_results: list) -> None:
     print("\n" + "=" * 80)
     print(" Ablation Test Summary")
     print("=" * 80)
-    print(f"  {'Model':>12s} | {'input_len':>9s} | {'MAE':>10s} | {'RMSE':>10s} | {'Latency(ms)':>12s}")
+    print(f"  {'Model':>12s} | {'input_len':>9s} | {'MAE':>10s} | {'RMSE':>10s} | {'MAPE':>10s} | {'Latency(ms)':>12s}")
     print(f"  {'─'*12}─┼─{'─'*9}─┼─{'─'*10}─┼─{'─'*10}─┼─{'─'*12}")
 
     for r in all_results:
         if r["success"]:
-            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['latency_ms']:>12.0f}")
+            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {r['mae']:>10.4f} | {r['rmse']:>10.4f} | {r['mape']:>10.4f} | {r['latency_ms']:>12.0f}")
         else:
-            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>12s}")
+            print(f"  {r['model_id']:>12s} | {r['input_length']:>9d} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>10s} | {'N/A':>12s}")
 
 
 def main():
