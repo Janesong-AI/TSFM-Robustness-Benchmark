@@ -16,8 +16,9 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    - `resume.py`: Encapsulates the checkpoint resume mechanism, managing checkpoint states and file persistence.
    - `timecho.py`: API Interaction Wrapper.
 - `features/`: Business feature implementation layer, containing specific business scenario logic
-- `utils/`: Basic utility library, containing stateless pure functions and general entity encapsulations
+- `utils/`: Utility Layer (Stateless pure functions)
    - `client.py`: Encapsulates the underlying client connection entity.
+   - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
    - `files.py`: File operation utilities.
    - `metrics.py`: Evaluation Metrics Calculator.
 - `run.py`: Unified entry point; bootstraps sys.path and dispatches execution by module name or file path.

@@ -33,8 +33,6 @@ from .dataResults import (
     get_results_by_model,
     get_results_by_scene,
     get_results_by_pass,
-    clean_nan_values,
-    load_json_with_nan
 )
 
 from .resume import (
@@ -54,8 +52,6 @@ __all__ = [
     "get_results_by_model",
     "get_results_by_scene",
     "get_results_by_pass",
-    "clean_nan_values",
-    "load_json_with_nan",
     # --- resume.py ---
     "load_results",
     "append_result",
