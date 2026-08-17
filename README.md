@@ -14,11 +14,12 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
 - `core/`: Core common component layer (cross-business reuse)
    - `dataResults.py`: Result Data Processing.
    - `resume.py`: Encapsulates the checkpoint resume mechanism, managing checkpoint states and file persistence.
-   - `timecho.py`: Encapsulates TimechoAI API interaction logic.
+   - `timecho.py`: API Interaction Wrapper.
 - `features/`: Business feature implementation layer, containing specific business scenario logic
 - `utils/`: Basic utility library, containing stateless pure functions and general entity encapsulations
    - `client.py`: Encapsulates the underlying client connection entity.
    - `files.py`: File operation utilities.
+   - `metrics.py`: Evaluation Metrics Calculator.
 - `run.py`: Unified entry point; bootstraps sys.path and dispatches execution by module name or file path.
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 

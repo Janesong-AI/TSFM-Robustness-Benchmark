@@ -83,7 +83,8 @@ import pandas as pd
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
 from core.resume import load_results, append_result, is_rate_limited
-from core.timecho import forecast, calc_metrics
+from core.timecho import forecast
+from utils.metrics import calc_metrics
 
 # ============================================================
 # 1. Data related configuration

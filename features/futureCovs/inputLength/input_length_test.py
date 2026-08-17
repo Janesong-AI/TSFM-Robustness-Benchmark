@@ -20,7 +20,8 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import FORECAST_POINT_LEN_64
-from core.timecho import forecast, calc_metrics
+from core.timecho import forecast
+from utils.metrics import calc_metrics
 from utils.files import save_to_csv
 
 # ============================================================

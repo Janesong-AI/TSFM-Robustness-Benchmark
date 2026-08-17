@@ -38,7 +38,8 @@ from typing import Tuple, Dict, List, Any
 
 from config.settings import OUTPUT_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
-from core.timecho import forecast, calc_metrics
+from core.timecho import forecast
+from utils.metrics import calc_metrics
 from utils.files import save_to_csv
 
 # ============================================================
@@ -362,7 +363,7 @@ def run_irregular_sampling_test(
         # Model prediction loop
         for model_id in models:
             t0 = time.perf_counter()
-            
+
             try:
                 pred_values, elapsed_ms, error = forecast(
                     targets=history,

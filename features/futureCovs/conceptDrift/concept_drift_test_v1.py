@@ -33,7 +33,8 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, TRAIN_SEQ_LEN_512
-from core.timecho import forecast, calc_metrics
+from core.timecho import forecast
+from utils.metrics import calc_metrics
 from utils.files import save_to_csv
 
 # ============================================================

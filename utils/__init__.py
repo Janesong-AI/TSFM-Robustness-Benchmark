@@ -5,6 +5,7 @@ This package provides stateless pure functions and generic entity wrappers, serv
 underlying support for the entire project. It currently includes:
 
 Modules:
+-------
   client.py — TimechoAI client connection entity.
     Provides factory functions get_timecho_client() / get_timecho_async_client(),
     unifying the creation and lifecycle management of TimechoAIClient / TimechoAIAsyncClient instances.
@@ -12,6 +13,9 @@ Modules:
     Also provides reset_client() / reset_async_client() for resetting singletons in test scenarios.
   files.py — File operation utilities.
     Provides functionality for reading, writing, appending, and status checking for files such as CSV/JSON.
+metrics.py — Evaluation Metrics Calculator
+  Provides standard evaluation metrics (MAE, RMSE, MAPE) for time series forecasting models.
+  Pure mathematical calculation functions without side effects.
 
 Usage Conventions:
   Business modules (e.g., features/) should access TimechoAI services indirectly through core.timecho.
@@ -22,6 +26,7 @@ Usage Conventions:
     from core.timecho import forecast  # Recommended way
     # Instead of:
     # from utils.client import get_timecho_client  # Business modules should avoid this
+    from utils.metrics import calc_metrics, calc_diff
 """
 
 from .client import (
@@ -37,7 +42,11 @@ from .files import (
     read_csv_to_dataframe,
     read_csv_to_list,
     csv_exists_and_not_empty,
-    CSVFileError
+    CSVFileError,
+)
+from .metrics import (
+    calc_metrics,
+    calc_diff
 )
 
 __all__ = [
@@ -54,4 +63,7 @@ __all__ = [
     "read_csv_to_list",
     "csv_exists_and_not_empty",
     "CSVFileError",
+    # --- metrics.py ---
+    "calc_metrics",
+    "calc_diff",
 ]

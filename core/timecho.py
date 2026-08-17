@@ -4,8 +4,9 @@ timecho.py —— TimechoAI CRUD Wrapper
 Provides a general calling layer for Timecho prediction interface, including:
   - forecast(): Wraps API call, timing, and exception handling
   - extract_pred_values(): Extracts prediction values from API-returned result DataFrame
-  - calc_metrics(): Calculates MAE / RMSE / MAPE
-  - calc_diff(): Calculates mean absolute difference between two sets of prediction values
+
+Author: Janesong
+Create Date: 2026/07/10.
 """
 
 # ============================================================
@@ -129,49 +130,3 @@ def forecast(
         elapsed_ms = (time.perf_counter() - t0) * 1000
         return None, elapsed_ms, str(exp)
 
-
-# ============================================================
-# Accuracy Metrics
-# ============================================================
-
-def calc_metrics(
-    predictions: np.ndarray | None,
-    ground_truth: np.ndarray,
-) -> dict[str, float | None]:
-    """
-    Calculate MAE / RMSE / MAPE.
-
-    Args:
-        predictions: Prediction values
-        ground_truth: Ground truth values
-
-    Returns:
-        {"MAE": ..., "RMSE": ..., "MAPE": ...}
-        MAE: Mean Absolute Error
-        RMSE: Root Mean Squared Error
-        MAPE: Mean Absolute Percentage Error
-    """
-    if predictions is None:
-        return {"MAE": None, "RMSE": None, "MAPE": None}
-
-    mae = float(np.mean(np.abs(predictions - ground_truth)))
-    rmse = float(np.sqrt(np.mean((predictions - ground_truth) ** 2)))
-    mape = float(np.mean(np.abs((predictions - ground_truth) / ground_truth)) * 100)
-    return {"MAE": mae, "RMSE": rmse, "MAPE": mape}
-
-
-def calc_diff(pred1: np.ndarray | None, pred2: np.ndarray | None) -> float | None:
-    """
-    Calculate mean absolute difference between two sets of prediction values.
-
-    Args:
-        pred1: First set of prediction values
-        pred2: Second set of prediction values
-
-    Returns:
-        Mean absolute difference, returns None if either is None
-    """
-    if pred1 is None or pred2 is None:
-        return None
-
-    return float(np.mean(np.abs(pred1 - pred2)))

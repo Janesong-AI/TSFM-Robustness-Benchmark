@@ -1,5 +1,5 @@
 """
-core -  Core Component Layer
+core —— Business Core Layer 业务核心层
 
 This package encapsulates essential reusable components, serving as a bridge between 
 the business layer and underlying utility services. It invokes services from the 
@@ -10,8 +10,8 @@ Modules:
     Contains utility functions for data cleaning and result retrieval.
   resume.py: Checkpoint & Resume Management
     Manages checkpoint status and file persistence, enabling recovery of long-running tasks after interruptions.
-  timecho.py: TimechoAI API Interaction
-    Handles API requests and response processing via ``utils.client``, offering a unified high-level API for external use.
+timecho.py —— TimechoAI Interaction
+    Encapsulates API requests and response handling, offering a unified high-level API.
 
 Usage:
   Business modules (e.g., in ``features/``) should access TimechoAI services 
@@ -45,9 +45,7 @@ from .resume import (
 
 from .timecho import (
     forecast,
-    extract_pred_values,
-    calc_metrics,
-    calc_diff
+    extract_pred_values
 )
 
 __all__ = [
@@ -64,8 +62,6 @@ __all__ = [
     "is_rate_limited",
     # --- timecho.py ---
     "forecast",
-    "extract_pred_values",
-    "calc_metrics",
-    "calc_diff"
+    "extract_pred_values"
 ]
 

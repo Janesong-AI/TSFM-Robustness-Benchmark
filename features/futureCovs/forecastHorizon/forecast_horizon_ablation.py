@@ -18,7 +18,8 @@ Create Date: 2026/07/05
 import numpy as np
 import pandas as pd
 
-from core.timecho import forecast, calc_metrics
+from core.timecho import forecast
+from utils.metrics import calc_metrics
 from config.constants import TRAIN_SEQ_LEN_512, FORECAST_POINT_LEN_256
 
 # ============================================================
