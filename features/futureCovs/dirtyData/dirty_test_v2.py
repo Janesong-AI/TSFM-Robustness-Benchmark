@@ -19,10 +19,10 @@ import pandas as pd
 
 from config.settings import DATA_DIR, OUTPUT_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
-from core.dataResults import get_results
 from core.timecho import forecast
 from utils.metrics import calc_metrics
-from core.resume import load_results, append_result, is_rate_limited
+from core.results import get_results, load_results_from_csv, append_result_to_csv
+from core.resume import is_rate_limited
 from utils.files import read_csv_to_dataframe
 from utils.data_sanitizer import clean_nan_values
 
@@ -38,7 +38,7 @@ RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result_v2.csv"    # Prediction res
 # ============================================================
 # Calculate test quantity
 # ============================================================
-completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
+completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
 completed_keys = set()  # Build key set for completed tests (model_id, scene, pass)
 retry_keys = set()      # Rate limit errors pending retry
@@ -168,7 +168,7 @@ for model_id in MODEL_LIST:
                     "latency_ms": 0,
                     "error": "API doesn't support NaN input (raw data contains missing values)"
                 }
-                append_result(str(RESULT_CSV_PATH), result_record)
+                append_result_to_csv(str(RESULT_CSV_PATH), result_record)
 
                 continue
 
@@ -227,7 +227,7 @@ for model_id in MODEL_LIST:
                         "error": error,
                     }
                     result_record = clean_nan_values(result_record)
-                    append_result(str(RESULT_CSV_PATH), result_record)
+                    append_result_to_csv(str(RESULT_CSV_PATH), result_record)
 
                 else:
                     metrics = calc_metrics(pred_values, ground_truth)
@@ -258,7 +258,7 @@ for model_id in MODEL_LIST:
                         "is_explosion": is_explosion,
                     }
                     result_record = clean_nan_values(result_record)
-                    append_result(str(RESULT_CSV_PATH), result_record)
+                    append_result_to_csv(str(RESULT_CSV_PATH), result_record)
 
             except Exception as exp:
                 error_msg = str(exp)
@@ -280,7 +280,7 @@ for model_id in MODEL_LIST:
                     "error": error_msg,
                 }
                 result_record = clean_nan_values(result_record)
-                append_result(str(RESULT_CSV_PATH), result_record)
+                append_result_to_csv(str(RESULT_CSV_PATH), result_record)
 
             time.sleep(1)
 
@@ -301,7 +301,7 @@ print("Reading complete results, generating summary report")
 print("=" * 90)
 
 # Read all results (including previously completed)
-results_data, _ = load_results(str(RESULT_CSV_PATH))
+results_data, _ = load_results_from_csv(str(RESULT_CSV_PATH))
 
 print("\n" + "=" * 100)
 print(" Robustness Analysis Conclusion")

@@ -79,10 +79,12 @@ Create Date: 2026/07/21.
 import time
 import numpy as np
 import pandas as pd
+from typing import Dict, Any
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
-from core.resume import load_results, append_result, is_rate_limited
+from core.results import load_results_from_csv, append_result_to_csv
+from core.resume import is_rate_limited
 from core.timecho import forecast
 from utils.metrics import calc_metrics
 
@@ -341,7 +343,7 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 # ============================================================
 def main():
     scenarios = build_scenarios()
-    completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
+    completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
     completed_keys = set()
     for record in completed_records:
@@ -373,7 +375,7 @@ def main():
                 if key in completed_keys: continue
                 
                 res = run_forecast(sc, mid, il)
-                append_result(str(RESULT_CSV_PATH), res)
+                append_result_to_csv(str(RESULT_CSV_PATH), res)
                 runned += 1
                 
                 if res["success"]:
@@ -401,7 +403,7 @@ def main():
                         key = (AUTO_ADAPT_ABLATION_SCENARIO, mid, il, aa)
                         if key in completed_keys: continue
                         res = run_forecast(ablation_sc, mid, il, auto_adapt=aa)
-                        append_result(str(RESULT_CSV_PATH), res)
+                        append_result_to_csv(str(RESULT_CSV_PATH), res)
                         runned += 1
                         if res["success"]:
                             print(f"[Y4] {mid:14s} in={il} adapt={aa} MAE={res['mae']:.4f}")

@@ -12,13 +12,13 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
 - `config/`: 全局配置管理模块
    - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`)等.
    - `constants.py`: 全局常量定义.
-- `core/`: 核心通用组件层(跨业务复用)
-   - `dataResults.py`: 结果数据处理.
-   - `resume.py`: 封装断点续跑机制, 管理检查点状态与文件持久化.
+- `core/`: 业务核心通用组件层 (封装业务逻辑与状态管理)
+   - `results.py`: 测试结果管理器 (批量缓冲/持久化).
+   - `resume.py`: 策略控制器 (限流判断/断点续跑).
    - `timecho.py`: API 交互封装.
 - `features/`: 业务特性实现层, 存放具体业务场景逻辑
 - `utils/`: 基础工具层 (无状态纯函数)
-   - `client.py`: 封装底层客户端连接实体.
+   - `client.py`: 底层客户端连接.
    - `data_sanitizer.py`: 数据清洗与类型安全工具.
    - `files.py`: 文件操作工具.
    - `metrics.py`: 评估计算指标.
@@ -26,40 +26,40 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
 - `README.md`: 项目说明文档, 提供项目概述、使用方法、注意事项等.
 
 ## 3. 测试流程
-1. 配置初始化：从 `config/settings.py` 中读取环境变量.
-2. 模型初始化：使用提供的API密钥对TimechoAI模型进行初始化.
-3. 测试执行：根据提供的命令行参数执行指定的测试流程.
-4. 结果输出：将测试结果输出至控制台或指定文件.
+1. 配置初始化: 从 `config/settings.py` 中读取环境变量.
+2. 模型初始化: 使用提供的API密钥对TimechoAI模型进行初始化.
+3. 测试执行: 根据提供的命令行参数执行指定的测试流程.
+4. 结果输出: 将测试结果输出至控制台或指定文件.
 
 ## 4. 命令与安装  
-- **创建虚拟环境 (通用)**：  
+- **创建虚拟环境 (通用)**:   
   `python -m venv .venv`
 
-- **激活虚拟环境** (请根据您的操作系统选择对应的命令)：  
-  - **macOS / Linux**：`source .venv/bin/activate`  
-  - **Windows(CMD 命令提示符)**：`.venv\Scripts\activate.bat`  
-  - **Windows(PowerShell)**：`.venv\Scripts\Activate.ps1`
+- **激活虚拟环境** (请根据您的操作系统选择对应的命令):   
+  - **macOS / Linux**: `source .venv/bin/activate`  
+  - **Windows(CMD 命令提示符)**: `.venv\Scripts\activate.bat`  
+  - **Windows(PowerShell)**: `.venv\Scripts\Activate.ps1`
 
-- **安装项目依赖** (**激活虚拟环境后首次执行**)：  
+- **安装项目依赖** (**激活虚拟环境后首次执行**):   
   `python -m pip install timecho-ai pandas`
 
-- **退出虚拟环境** (通用)：  
+- **退出虚拟环境** (通用):   
   `deactivate`
 
-> **Windows PowerShell 用户注意**：若遇到“禁止运行脚本”的报错，请以管理员身份运行 PowerShell 并执行：  
+> **Windows PowerShell 用户注意**: 若遇到“禁止运行脚本”的报错, 请以管理员身份运行 PowerShell 并执行:   
 > `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-- 运行:  
-   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v1`  # 概念漂移测试(简约版)  
-   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`  # 概念漂移测试(XYZ场景)  
+- **运行**:  
+   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v1`   # 概念漂移测试(简约版)  
+   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`   # 概念漂移测试(XYZ场景)  
    `python run.py features.futureCovs.covariant.cov_test`                # 协变量有效性  
    `python run.py features.futureCovs.covariant.cov_test_models`         # 协变量支持度测试(遍历所有模型)  
    `python run.py features.futureCovs.dirtyData.dirty_test`              # 脏数据鲁棒性(不支持NaN)  
    `python run.py features.futureCovs.dirtyData.dirty_test_v2`           # 脏数据鲁棒性  
-   `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation` # C2 预测步长消融实验  
-   `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`      # C5 频率失配鲁棒性  
-   `python run.py features.futureCovs.inputLength.input_length_test`     # input_length消融测试  
-   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test` # 非规则采样鲁棒性  
+   `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation`   # C2 预测步长消融实验  
+   `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`        # C5 频率失配鲁棒性  
+   `python run.py features.futureCovs.inputLength.input_length_test`     # Input_length消融测试  
+   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test`   # 非规则采样鲁棒性  
 
 ## 5. 测试目标
 - 边缘场景探测: 针对复杂查询、多副本不一致、时间序列乱序写入等边界条件, 系统性验证模型的工程鲁棒性.

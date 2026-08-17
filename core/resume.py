@@ -1,105 +1,144 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-core/resume.py —— Resume from Checkpoint
+core/resume.py —— Resume from Checkpoint Strategy Controller
 
-Function: Provides common utility functions for checkpoint resumption, result appending, and rate limit detection, for use by business test scripts.
+Module Purpose:
+  Provides checkpoint resumption strategy and rate limit detection.
+  Encapsulates decision logic for skipping tests or retrying failed ones.
+
+Core Features:
+  - Rate limit detection (429 error identification)
+  - Checkpoint resumption strategy
+  - Retry decision logic
 
 Usage:
-  from core.resume import load_results, append_result, is_rate_limited
+    from core.resume import is_rate_limited, should_skip_test
 
-  all_records, perm_fail_count = load_results("path/to/result.csv")
-  # Build completed_keys yourself: set of tuples
-  completed_keys = set()
-  for r in all_records:
-      if r.get("success"):
-          completed_keys.add((r["scenario_id"], r["model_id"], ...))
+    # Check if error is rate limit
+    if is_rate_limited(error_msg):
+        # Handle rate limit (retry later)
+        pass
 
-  append_result("path/to/result.csv", new_record)
+    # Check if should skip test
+    if should_skip_test(completed_keys, test_key):
+        continue
 
 Author: Janesong
-Create Date: 2026/07/10.
+Create Date: 2026/07/10, Updated on 2026/08/17.
 """
 
-import pandas as pd
+from typing import Set, Tuple, Any
 
+# Rate limit keywords for detection
 RATE_LIMIT_KEYWORDS = ["429", "limit", "quota", "exceed", "rate", "too many"]
-
-
-def load_results(result_csv_path_file: str) -> tuple[list[dict], int]:
+def is_rate_limited(error_msg: str) -> bool:
     """
-    Read historical result CSV file and return record list and permanent failure count.
-
-    This method only performs reading and basic classification, does not assume key structure.
-    The caller should build completed_keys based on their own column structure.
-
+    Check if error is rate-limit (429 Too Many Requests) error.
+    
+    This method detects rate limit errors based on common keywords in error messages returned by API providers.
+    
     Args:
-        result_csv_path_file: Result CSV file path (including filename)
+        error_msg: Error message string
 
     Returns:
-        (all_records, perm_fail_count)
-        - all_records: list[dict], each row in CSV converted to dict
-        - perm_fail_count: int, number of permanent failures (non-rate-limit errors)
+        True if rate-limit error, False otherwise
+    
+    Example:
+        >>> is_rate_limited("Error 429: Too Many Requests")
+        True
+        >>> is_rate_limited("Rate limit exceeded")
+        True
+        >>> is_rate_limited("Connection timeout")
+        False
     """
-    from pathlib import Path
-    path = Path(result_csv_path_file)
-    if not path.exists():
-        print(f"  {path.name} not found, will start full testing from scratch. ")
-        return [], 0
+    if not error_msg:
+        return False
 
-    try:
-        df = pd.read_csv(result_csv_path_file)
-        all_records = df.to_dict("records")
-        perm_fail_count = 0
-        retry_count = 0
-
-        for record in all_records:
-            success_val = record.get("success", "")
-            if str(success_val).strip().lower() == "true":
-                continue
-            if is_rate_limited(str(record.get("error", ""))):
-                retry_count += 1
-            else:
-                perm_fail_count += 1
-
-        msg = f"  Found {path.name}, Success: {len(all_records) - perm_fail_count - retry_count}"
-        if perm_fail_count > 0:
-            msg += f", Permanent Failures (Skipped): {perm_fail_count}"
-        if retry_count > 0:
-            msg += f", Pending Retry (429): {retry_count}"
-        print(msg)
-        return all_records, perm_fail_count
-    except Exception as exp:
-        print(f"  Failed to read {path.name}: {exp}, will start from scratch. ")
-        return [], 0
+    error_lower = error_msg.lower()
+    return any(k in error_lower for k in RATE_LIMIT_KEYWORDS)
 
 
-def append_result(result_csv_path_file: str, result: dict) -> None:
+def should_skip_test(
+    completed_keys: Set[Tuple[Any, ...]], 
+    test_key: Tuple[Any, ...],
+    failed_keys: Set[Tuple[Any, ...]] = None
+) -> bool:
     """
-    Append single result to CSV file.
+    Determine if a test should be skipped (already completed or permanently failed).
 
     Args:
-        result_csv_path_file: Result CSV file path (including filename)
-        result: Single result dictionary, keys are column names
-    """
-    from pathlib import Path
-    path = Path(result_csv_path_file)
-    row_df = pd.DataFrame([result])
-    if path.exists():
-        row_df.to_csv(str(path), mode="a", header=False, index=False)
-    else:
-        row_df.to_csv(str(path), mode="w", header=True, index=False)
-
-
-def is_rate_limited(error_str: str) -> bool:
-    """
-    Determine if error string is a rate limit error (429 Too Many Requests).
-
-    Args:
-        error_str: Error message string
+        completed_keys: Set of already completed test keys
+        test_key: Current test key to check
+        failed_keys: Set of permanently failed test keys (optional)
 
     Returns:
-        Whether it is a rate limit error
+        True if test should be skipped, False otherwise
+
+    Example:
+        >>> completed = {("model_a", "scene_1"), ("model_b", "scene_2")}
+        >>> should_skip_test(completed, ("model_a", "scene_1"))
+        True
+        >>> should_skip_test(completed, ("model_c", "scene_1"))
+        False
     """
-    lower = error_str.lower()
-    return any(k in lower for k in RATE_LIMIT_KEYWORDS)
+    if test_key in completed_keys:
+        return True
+
+    if failed_keys and test_key in failed_keys:
+        return True
+
+    return False
+
+
+def build_completed_keys(
+    records: list, 
+    key_columns: list
+) -> tuple[Set[Tuple[Any, ...]], Set[Tuple[Any, ...]]]:
+    """
+    Build completed and failed test key sets from records.
+
+    This method extracts test keys from historical results for checkpoint resumption.
+
+    Args:
+        records: List of result dictionaries (from CSV)
+        key_columns: List of column names to build key (e.g., ["model_id", "scene"])
+    
+    Returns:
+        (completed_keys, failed_keys)
+        - completed_keys: Set of successfully completed test keys
+        - failed_keys: Set of permanently failed test keys (non-rate-limit)
+
+    Example:
+        >>> records = [
+        ...     {"model_id": "Timer-3.0", "scene": "S0", "success": "true"},
+        ...     {"model_id": "Timer-3.0", "scene": "S1", "success": "false", "error": "timeout"}
+        ... ]
+        >>> completed, failed = build_completed_keys(records, ["model_id", "scene"])
+        >>> completed
+        {("Timer-3.0", "S0")}
+        >>> failed
+        {("Timer-3.0", "S1")}
+    """
+    completed_keys = set()
+    failed_keys = set()
+
+    for record in records:
+        # Build key from specified columns
+        key = tuple(record.get(col) for col in key_columns)
+        
+        success_val = str(record.get("success", "")).strip().lower()
+        
+        if success_val == "true":
+            # Successfully completed
+            completed_keys.add(key)
+        else:
+            # Check if it's a rate limit error
+            error_msg = str(record.get("error", ""))
+            if not is_rate_limited(error_msg):
+                # Permanent failure, should skip
+                failed_keys.add(key)
+            # Rate limit errors should be retried, not added to failed_keys
+    
+    return completed_keys, failed_keys
+

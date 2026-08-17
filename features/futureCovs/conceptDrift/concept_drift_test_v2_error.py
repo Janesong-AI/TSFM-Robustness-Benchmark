@@ -66,7 +66,8 @@ import pandas as pd
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
-from core.resume import load_results, append_result, is_rate_limited
+from core.results import load_results_from_csv, append_result_to_csv
+from core.resume import is_rate_limited
 from core.timecho import forecast
 from utils.metrics import calc_metrics
 
@@ -325,7 +326,7 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 # 4. 主流程
 # ============================================================
 scenarios = build_scenarios()
-completed_records, perm_fail_count = load_results(str(RESULT_CSV_PATH))
+completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
 completed_keys = set()  # 构建 completed_keys: 成功 + 永久失败(非限流错误)
 for record in completed_records:
@@ -387,7 +388,7 @@ else:
                     continue
 
                 r = run_forecast(scenario, model_id, in_len, auto_adapt=True)
-                append_result(str(RESULT_CSV_PATH), r)
+                append_result_to_csv(str(RESULT_CSV_PATH), r)
                 all_results.append(r)
                 runned += 1
 
@@ -425,7 +426,7 @@ else:
 
                     r = run_forecast(ablation_scenario, model_id, in_len, auto_adapt=aa)
                     r["ablation"] = True
-                    append_result(str(RESULT_CSV_PATH), r)
+                    append_result_to_csv(str(RESULT_CSV_PATH), r)
                     all_results.append(r)
                     runned += 1
 

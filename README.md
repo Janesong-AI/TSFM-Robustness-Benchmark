@@ -9,19 +9,19 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
 
 ## 2. Directory and File Specifications
 - `config/`: Global configuration management module
-   - `settings.py`: Global environment variable configuration (e.g., `TIMECHO_API_KEY`), etc.
+   - `settings.py`: Global environment variable configuration (e.g., `TIMECHO_API_KEY`).
    - `constants.py`: Global constants definition.
-- `core/`: Core common component layer (cross-business reuse)
-   - `dataResults.py`: Result Data Processing.
-   - `resume.py`: Encapsulates the checkpoint resume mechanism, managing checkpoint states and file persistence.
+- `core/`: Business Core Layer (Encapsulates logic and state)
+   - `results.py`: Test Result Manager (Batch buffering/Persistence).
+   - `resume.py`: Strategy Controller (Rate limit handling/Checkpoint resume).
    - `timecho.py`: API Interaction Wrapper.
 - `features/`: Business feature implementation layer, containing specific business scenario logic
 - `utils/`: Utility Layer (Stateless pure functions)
-   - `client.py`: Encapsulates the underlying client connection entity.
+   - `client.py`: Low-level Client Connection.
    - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
-   - `files.py`: File operation utilities.
+   - `files.py`: File Operation Utils.
    - `metrics.py`: Evaluation Metrics Calculator.
-- `run.py`: Unified entry point; bootstraps sys.path and dispatches execution by module name or file path.
+- `run.py`: Unified entry point; configures `sys.path` and dispatches execution by module name or file path.
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 
 ## 3. Testing Process
@@ -49,16 +49,16 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
 > `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 - **Run**:   
-   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v1`  # Concept Drift Test (Simplified Edition)  
-   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`  # Concept Drift Test (XYZ Scenario)  
+   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v1`   # Concept Drift Test (Simplified Edition)  
+   `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`   # Concept Drift Test (XYZ Scenario)  
    `python run.py features.futureCovs.covariant.cov_test`                # Covariate Effectiveness Test  
    `python run.py features.futureCovs.covariant.cov_test_models`         # Covariate Support Test (Iterate All Models)  
    `python run.py features.futureCovs.dirtyData.dirty_test`              # Dirty Data Robustness Test (No NaN Support)  
    `python run.py features.futureCovs.dirtyData.dirty_test_v2`           # Dirty Data Robustness Test  
-   `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation` # C2 Forecast Horizon Ablation Experiment  
-   `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`      # C5 Frequency Mismatch Robustness Test  
+   `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation`   # C2 Forecast Horizon Ablation Experiment  
+   `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`        # C5 Frequency Mismatch Robustness Test  
    `python run.py features.futureCovs.inputLength.input_length_test`     # Input_length Ablation Test  
-   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test` # Irregular Sampling Robustness Test  
+   `python run.py features.futureCovs.irregularSampling.irregular_sampling_test`   # Irregular Sampling Robustness Test  
 
 ## 5. Testing Objectives
 - Edge case exploration: Systematically verify the engineering robustness of the model against boundary conditions such as complex queries, replica inconsistencies, and out-of-order time-series writes.  

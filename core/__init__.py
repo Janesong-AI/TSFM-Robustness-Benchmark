@@ -1,34 +1,41 @@
 """
-core —— Business Core Layer 业务核心层
+core —— Business Core Layer
 
-This package encapsulates essential reusable components, serving as a bridge between 
-the business layer and underlying utility services. It invokes services from the 
-``utils`` layer and provides standard interfaces for business modules.
+Provides centralized management for business logic, state, and external interactions.
+Serves as the bridge between the ``features`` layer and ``utils`` layer.
 
 Modules:
-  dataResults.py: Result Data Processing
-    Contains utility functions for data cleaning and result retrieval.
-  resume.py: Checkpoint & Resume Management
-    Manages checkpoint status and file persistence, enabling recovery of long-running tasks after interruptions.
+-------
+results.py —— Test Result Manager
+  Manages result persistence (batch buffering), historical loading, and querying.
+resume.py —— Strategy Controller
+  Provides checkpoint resumption logic and rate limit detection strategy.
 timecho.py —— TimechoAI Interaction
     Encapsulates API requests and response handling, offering a unified high-level API.
 
 Usage:
-  Business modules (e.g., in ``features/``) should access TimechoAI services 
-  via ``core.timecho``. The ``core`` layer should be the sole module directly 
-  utilizing ``utils.client`` to ensure decoupling.
+--------------
+>>> # Result management (with auto buffering)
+>>> from core.results import load_results_from_csv, append_result_to_csv, flush_all_results
+>>> records, fails = load_results_from_csv("./results/test.csv")
+>>> append_result_to_csv("./results/test.csv", {"mae": 0.5})  # Auto buffered
+>>> flush_all_results()  # Must call before exit
 
-  Import Path Examples:
-    # Recommended Approach
-      from core.dataResults import clean_nan_values, get_results
-      from core.timecho import forecast
-      from core.resume import load_results, append_result, is_rate_limited
+>>> # Strategy control
+>>> from core.resume import is_rate_limited, build_completed_keys
+>>> if is_rate_limited("Error 429"):
+...     print("Rate limit detected")
 
-    # Avoid direct imports from utils.client to prevent tight coupling
-    # from utils.client import get_timecho_client
+>>> # API interaction
+>>> from core.timecho import forecast
+>>> forecast(data)
 """
 
-from .dataResults import (
+
+from .results import (
+    load_results_from_csv,
+    append_result_to_csv,
+    flush_all_results,
     get_results,
     get_results_by_model,
     get_results_by_scene,
@@ -36,9 +43,9 @@ from .dataResults import (
 )
 
 from .resume import (
-    load_results,
-    append_result,
-    is_rate_limited
+    is_rate_limited,
+    should_skip_test,
+    build_completed_keys
 )
 
 from .timecho import (
@@ -47,15 +54,18 @@ from .timecho import (
 )
 
 __all__ = [
-    # --- dataResults.py ---
+    # --- results.py ---
+    "load_results_from_csv",
+    "append_result_to_csv",
+    "flush_all_results",
     "get_results",
     "get_results_by_model",
     "get_results_by_scene",
     "get_results_by_pass",
     # --- resume.py ---
-    "load_results",
-    "append_result",
     "is_rate_limited",
+    "should_skip_test",
+    "build_completed_keys",
     # --- timecho.py ---
     "forecast",
     "extract_pred_values"
