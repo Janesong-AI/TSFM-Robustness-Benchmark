@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
 utils/files.py -- File operation utility module
 
@@ -13,21 +15,22 @@ Create Date: 2026/07/12.
 import csv
 import json
 from pathlib import Path
-from typing import Union, List, Dict, Any, Optional
+from typing import Any
 import pandas as pd
 
 
 class CSVFileError(Exception):
-    """CSV file operation exception"""
+    """Custom exception for CSV file operations."""
     pass
 
 
 def save_to_csv(
-    result_csv_path_file: Union[str, Path],
-    data: Union[List[Dict[str, Any]], Dict[str, Any], pd.DataFrame],
+    result_csv_path_file: str | Path,
+    data: list[dict[str, Any]] | list[list[Any]] | dict[str, Any] | pd.DataFrame,
     index: bool = False,
     mode: str = "w",
     encoding: str = "utf-8",
+    columns: list[str] | None = None,
     **kwargs
 ) -> Path:
     """
@@ -42,29 +45,30 @@ def save_to_csv(
         index: Whether to save index, default False
         mode: Write mode, 'w'=overwrite write, 'a'=append write, default 'w'
         encoding: File encoding, default 'utf-8'
+        columns: Column order to enforce. If provided, output columns will follow this order
         **kwargs: Additional pandas to_csv parameters
 
     Returns:
         Path: Saved file path object
-        
+
     Raises:
         CSVFileError: Raised when file path or data is invalid
-        
+
     Example:
         >>> # Save list of dictionaries
         >>> data = [
         ...     {"model": "model_a", "mae": 0.5, "rmse": 0.8},
         ...     {"model": "model_b", "mae": 0.6, "rmse": 0.9}
         ... ]
-        >>> save_result_to_csv("./results/test.csv", data)
-        
+        >>> save_to_csv("./results/test.csv", data)
+
         >>> # Save single dictionary
         >>> result = {"model": "model_a", "mae": 0.5, "rmse": 0.8}
-        >>> save_result_to_csv("./results/test.csv", result)
-        
+        >>> save_to_csv("./results/test.csv", result)
+
         >>> # Save DataFrame
         >>> df = pd.DataFrame({"model": ["a", "b"], "mae": [0.5, 0.6]})
-        >>> save_result_to_csv("./results/test.csv", df)
+        >>> save_to_csv("./results/test.csv", df)
     """
     # Validate required parameters
     if not result_csv_path_file:
@@ -72,38 +76,41 @@ def save_to_csv(
 
     # Convert to Path object
     file_path = Path(result_csv_path_file)
-    
+
     # Validate file extension
     if file_path.suffix.lower() != ".csv":
         raise CSVFileError(f"File extension must be .csv; current is: {file_path.suffix}")
-    
+
     # Create parent directory (if not exists)
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     # Data format conversion
     if isinstance(data, pd.DataFrame):
         df = data
+        if columns is not None:
+            df = df.copy()
+            df.columns = columns
     elif isinstance(data, dict):
-        # Single dictionary converted to single-row DataFrame
-        df = pd.DataFrame([data])
+        # Single dictionary converted to single-row DataFrame, with optional column ordering
+        df = pd.DataFrame([data], columns=columns)
     elif isinstance(data, list):
         if len(data) == 0:
             # Empty list, create empty DataFrame
-            df = pd.DataFrame()
+            df = pd.DataFrame(columns=columns) if columns else pd.DataFrame()
         else:
             # List of dictionaries converted to DataFrame
-            df = pd.DataFrame(data)
+            df = pd.DataFrame(data, columns=columns)
     else:
-        raise CSVFileError(f"Unsupported data type: {type(data).__name__}, supported: List[Dict], Dict, DataFrame")
-    
+        raise CSVFileError(f"Unsupported data type: {type(data).__name__}")
+
     # Handle append mode
-    if mode == "a" and file_path.exists():
+    if mode == "a" and file_path.exists() and file_path.stat().st_size > 0:
         # Append mode: do not write header
         header = False
     else:
         # Write mode: write header
         header = True
-    
+
     # Save CSV
     try:
         df.to_csv(
@@ -121,45 +128,48 @@ def save_to_csv(
 
 
 def append_to_csv(
-    result_csv_path_file: Union[str, Path],
-    data: Union[Dict[str, Any], List[Dict[str, Any]]],
-    encoding: str = "utf-8"
+    result_csv_path_file: str | Path,
+    data: dict[str, Any] | list[dict[str, Any]],
+    encoding: str = "utf-8",
+    columns: list[str] | None = None,
 ) -> Path:
     """
     Append results to CSV file (resume from breakpoint scenario)
 
     If file does not exist, will create new file; if exists, will append data (without writing header)
-    
+
     Args:
         result_csv_path_file: CSV file path (including filename), required parameter
         data: Data to append
             - Dict: Single row of data
             - List[Dict]: Multiple rows of data
         encoding: File encoding, default 'utf-8'
-        
+        columns: Column order to enforce when appending. If provided, output columns will follow this order.
+
     Returns:
         Path: Appended file path object
-        
+
     Example:
         >>> result = {"model": "model_a", "mae": 0.5}
-        >>> append_result_to_csv("./results/test.csv", result)
+        >>> append_to_csv("./results/test.csv", result, columns=["model", "mae"])
     """
     return save_to_csv(
         result_csv_path_file=result_csv_path_file,
         data=data,
         mode="a",
-        encoding=encoding
+        encoding=encoding,
+        columns=columns
     )
 
 
 def save_with_json_backup(
-    result_csv_path_file: Union[str, Path],
-    data: Union[List[Dict[str, Any]], pd.DataFrame],
+    result_csv_path_file: str | Path,
+    data: list[dict[str, Any]] | pd.DataFrame,
     save_json: bool = True,
     index: bool = False,
     encoding: str = "utf-8",
     **kwargs
-) -> tuple[Path, Optional[Path]]:
+) -> tuple[Path, Path | None]:
     """
     Save results to CSV, with optional JSON backup
     
@@ -173,10 +183,10 @@ def save_with_json_backup(
         
     Returns:
         tuple[Path, Optional[Path]]: (CSV path, JSON path or None)
-        
+
     Example:
         >>> data = [{"model": "a", "mae": 0.5}]
-        >>> csv_path, json_path = save_result_with_json_backup("./results/test.csv", data)
+        >>> csv_path, json_path = save_with_json_backup("./results/test.csv", data)
     """
     # Save CSV
     csv_path = save_to_csv(
@@ -207,7 +217,7 @@ def save_with_json_backup(
 
 
 def read_csv_to_dataframe(
-    result_csv_path_file: Union[str, Path],
+    result_csv_path_file: str | Path,
     encoding: str = "utf-8",
     **kwargs
 ) -> pd.DataFrame:
@@ -237,16 +247,15 @@ def read_csv_to_dataframe(
         raise CSVFileError(f"File does not exist: {file_path}")
     
     try:
-        df = pd.read_csv(file_path, encoding=encoding, **kwargs)
-        return df
+        return pd.read_csv(file_path, encoding=encoding, **kwargs)
     except Exception as exp:
         raise CSVFileError(f"Failed to read CSV file: {file_path}\nError: {exp}")
 
 
 def read_csv_to_list(
-    result_csv_path_file: Union[str, Path],
+    result_csv_path_file: str | Path,
     encoding: str = "utf-8"
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Read CSV file as list of dictionaries
     
@@ -265,32 +274,33 @@ def read_csv_to_list(
     return df.to_dict(orient="records")
 
 
-def csv_exists_and_not_empty(result_csv_path_file: Union[str, Path]) -> bool:
+def csv_exists_and_not_empty(result_csv_path_file: str | Path) -> bool:
     """
-    Check if CSV file exists and is not empty
-    
+    Check if CSV file exists and is not empty (has at least one data row)
+
     Args:
         result_csv_path_file: CSV file path
-        
+
     Returns:
         bool: True=file exists and has data; False=file does not exist or is empty
-        
+
     Example:
         >>> if csv_exists_and_not_empty("./results/test.csv"):
         ...     df = read_csv_to_dataframe("./results/test.csv")
     """
     if not result_csv_path_file:
         return False
-    
+
     file_path = Path(result_csv_path_file)
-    
     if not file_path.exists():
         return False
-    
+    if file_path.stat().st_size == 0:
+        return False
+
     # Check if file is empty (only header also counts as non-empty)
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path, nrows=1)
         return len(df) > 0
-    except:
+    except Exception:
         return False
 
