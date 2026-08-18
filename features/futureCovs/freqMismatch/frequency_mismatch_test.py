@@ -24,7 +24,7 @@ Input Data Characteristics:
 
 Output Results:
   - CSV File: 8 records (2 models * 4 modes)
-  - Metrics: MAE_full, MAE_16, MAE_32, MAE_std, Max_error
+  - Metrics: MAE, MAE_16, MAE_32, MAE_STD, MAX_ERROR
 
 Total calls: 8 times (2 models * 4 modes)
 
@@ -38,6 +38,7 @@ import pandas as pd
 from config.settings import OUTPUT_DIR
 from config import constants as CONSTANTS
 from core.timecho import forecast
+from utils.metrics import evaluate_prediction
 from utils.files import save_to_csv
 
 # ============================================================
@@ -89,22 +90,22 @@ def generate_frequency_mismatch_data(
         time_info: Time related info dictionary
     """
     np.random.seed(seed)
-    
+
     # Time series
     time_full = pd.date_range("2026-08-13", periods=n_train + forecast_len, freq="1h")
     time_history = time_full[:n_train]
     time_future = time_full[n_train:]
-    
+
     # Training segment: Fixed period
     trend_train = np.linspace(base_value, base_value + trend_amp, n_train)
     seasonal_train = seasonal_amp * np.sin(2 * np.pi * np.arange(n_train) / train_period)
     noise_train = np.random.randn(n_train) * noise_std
     history = (trend_train + seasonal_train + noise_train).round(4)
-    
+
     # Prediction segment: Different periods
     trend_fc = np.linspace(base_value + trend_amp, base_value + 2 * trend_amp, forecast_len)
     noise_fc = np.random.randn(forecast_len) * noise_std
-    
+
     futures = {}
     mode_configs = {}
     
@@ -121,12 +122,12 @@ def generate_frequency_mismatch_data(
             factor = period / train_period
             mode_name = f"4-Slowdown{factor:.0f}x({train_period}h->{period}h)"
             desc = f"Slowdown: Period increases {factor:.0f}x"
-        
+
         # Seasonal component (Key: Continue from training end phase)
         # Note: Includes phase discontinuity to test model robustness
         indices = np.arange(n_train, n_train + forecast_len)
         seasonal_fc = seasonal_amp * np.sin(2 * np.pi * indices / period)
-        
+
         ground_truth = (trend_fc + seasonal_fc + noise_fc).round(4)
         futures[mode_name] = ground_truth
         mode_configs[mode_name] = {
@@ -134,13 +135,12 @@ def generate_frequency_mismatch_data(
             "desc": desc,
             "full_periods": forecast_len / period
         }
-    
-    # Wrap into DataFrame
+
     df_history = pd.DataFrame({
         "time": time_history,
         "target": history
     })
-    
+
     time_info = {
         "time_full": time_full,
         "time_history": time_history,
@@ -152,43 +152,7 @@ def generate_frequency_mismatch_data(
 
 
 # ============================================================
-# 2. Evaluation Function
-# ============================================================
-def evaluate_prediction(pred: np.ndarray, gt: np.ndarray, steps: list = None):
-    """
-    Calculate prediction error metrics
-
-    Args:
-        pred: Prediction array
-        gt: Ground truth array
-        steps: List of evaluation steps, e.g. [16, 32, 64]
-    
-    Returns:
-        metrics: Dictionary of error metrics
-    """
-    if steps is None:
-        steps = [16, 32, 64]
-    
-    errors = pred - gt
-    abs_errors = np.abs(errors)
-    
-    metrics = {
-        "mae_full": float(np.mean(abs_errors)),
-        "mae_std": float(np.std(abs_errors)),
-        "max_error": float(np.max(abs_errors)),
-        "rmse": float(np.sqrt(np.mean(errors ** 2)))
-    }
-    
-    # Segmented MAE
-    for step in steps:
-        if step <= len(abs_errors):
-            metrics[f"mae_{step}"] = float(np.mean(abs_errors[:step]))
-    
-    return metrics
-
-
-# ============================================================
-# 3. Main Test Flow
+# 2. Main Test Flow 主测试流程
 # ============================================================
 def run_frequency_mismatch_test():
     """Execute frequency mismatch test"""
@@ -196,19 +160,19 @@ def run_frequency_mismatch_test():
     print("=" * 90)
     print("C5 Frequency Mismatch Test")
     print("=" * 90)
-    
+
     # Test configuration
     eval_periods = [24, 12, 8, 48]  # Prediction periods
     models = ["Chronos-2", "Timer-3.5"]
     
     # --------------------------------------------------------
-    # 3.1 Data Generation
+    # 2.1 Data Generation
     # --------------------------------------------------------
     print(f"\n[Data Generation]")
     print(f"  Training Length: {N_TRAIN}, Prediction Length: {FORECAST_LEN}")
     print(f"  Training Period: {TRAIN_PERIOD}h (Fixed)")
     print(f"  Prediction Periods: {eval_periods}h")
-    
+
     df_history, futures, mode_configs, time_info = generate_frequency_mismatch_data(
         n_train=N_TRAIN,
         forecast_len=FORECAST_LEN,
@@ -220,7 +184,7 @@ def run_frequency_mismatch_test():
         noise_std=CONSTANTS.SIGNAL_NOISE_STD_15,
         seed=SEED
     )
-    
+
     # Data statistics
     print(f"\n  Training Data Statistics:")
     print(f"    - Mean: {df_history['target'].mean():.2f}")
@@ -228,10 +192,10 @@ def run_frequency_mismatch_test():
     print(f"    - Range: [{df_history['target'].min():.2f}, {df_history['target'].max():.2f}]")
     
     # --------------------------------------------------------
-    # 3.2 Execute Prediction
+    # 2.2 Execute Prediction
     # --------------------------------------------------------
     print(f"\n[Model Prediction]")
-    
+
     all_results = []
     result_details = []     # Detailed results for analysis
 
@@ -254,25 +218,24 @@ def run_frequency_mismatch_test():
 
                 # Calculate error metrics
                 metrics = evaluate_prediction(pred, gt, steps=[16, 32, 64])
+                print(f"    {mode_name:<25s}  MAE={metrics['MAE']:.4f}  "
+                      f"(First 16 steps: {metrics['MAE_16']:.4f}, First 32 steps: {metrics['MAE_32']:.4f})")
 
-                print(f"    {mode_name:<25s}  MAE={metrics['mae_full']:.4f}  "
-                      f"(First 16 steps: {metrics['mae_16']:.4f}, First 32 steps: {metrics['mae_32']:.4f})")
-                
                 # Record results
                 result_row = [
                     model_id,
                     mode_name,
                     cfg["period"],
                     cfg["desc"],
-                    metrics["mae_full"],
-                    metrics.get("mae_16"),
-                    metrics.get("mae_32"),
-                    metrics["mae_std"],
-                    metrics["max_error"],
-                    metrics["rmse"]
+                    metrics["MAE"],
+                    metrics.get("MAE_16"),
+                    metrics.get("MAE_32"),
+                    metrics["MAE_STD"],
+                    metrics["MAX_ERROR"],
+                    metrics["RMSE"]
                 ]
                 all_results.append(result_row)
-                
+
                 # Detailed record (for analysis)
                 result_details.append({
                     "model": model_id,
@@ -284,13 +247,12 @@ def run_frequency_mismatch_test():
                 })
 
             except Exception as exp:
-                import traceback
                 print(f"    {mode_name:<25s}  Failed: {type(exp).__name__}: {str(exp)}")
                 all_results.append([model_id, mode_name, cfg["period"], cfg["desc"]] + [None] * 6)
 
 
     # --------------------------------------------------------
-    # 3.3 Result Summary
+    # 2.3 Result Summary
     # --------------------------------------------------------
     print(f"\n{'='*90}")
     print("C5 Frequency Mismatch - Summary Results")
@@ -303,37 +265,37 @@ def run_frequency_mismatch_test():
     
     # Iterate results
     for row in all_results:
-        model_id, mode_name, period, desc, mae_full, mae_16, mae_32, mae_std, max_err, rmse = row
-        
-        mae_s = f"{mae_full:.4f}" if mae_full is not None else "N/A"
-        m16_s = f"{mae_16:.4f}" if mae_16 is not None else "N/A"
-        m32_s = f"{mae_32:.4f}" if mae_32 is not None else "N/A"
-        m64_s = f"{rmse:.4f}" if rmse is not None else "N/A"
-        
+        model_id, mode_name, period, desc, MAE, MAE_16, MAE_32, MAE_STD, MAX_ERROR, RMSE = row
+
+        mae_s = f"{MAE:.4f}" if MAE is not None else "N/A"
+        m16_s = f"{MAE_16:.4f}" if MAE_16 is not None else "N/A"
+        m32_s = f"{MAE_32:.4f}" if MAE_32 is not None else "N/A"
+        m64_s = f"{RMSE:.4f}" if RMSE is not None else "N/A"
+
         print(f"{model_id:<12s} | {mode_name:<25s} | {period:>4d}h | {mae_s:>8s} | {m16_s:>8s} | {m32_s:>8s} | {m64_s:>8s}")
-    
+
     # --------------------------------------------------------
-    # 3.4 Comparative Analysis
+    # 2.4 Comparative Analysis
     # --------------------------------------------------------
     print(f"\n{'='*90}")
     print("Key Comparative Analysis")
     print(f"{'='*90}")
     
     for model_id in models:
-        model_results = [r for r in all_results if r[0] == model_id and r[4] is not None]
+        model_results = [record for record in all_results if record[0] == model_id and record[4] is not None]
         
         if len(model_results) < 2:
             continue
         
         print(f"\n[{model_id}]")
-        
+
         # Baseline(24->24)
         base_result = model_results[0]
         mae_base = base_result[4]
 
         print(f"  Baseline MAE (Period Unchanged): {mae_base:.4f}")
         print(f"  Performance Degradation caused by Frequency Mismatch:")
-        
+
         for row in model_results[1:]:
             mode_name, period, mae = row[1], row[2], row[4]
             ratio = mae / mae_base if mae_base > 0 else 0
@@ -343,16 +305,16 @@ def run_frequency_mismatch_test():
 
 
     # --------------------------------------------------------
-    # 3.5 Save Results
+    # 2.5 Save Results
     # --------------------------------------------------------
     columns = [
-        "model", "mode", "period", "description",
-        "mae_full", "mae_16", "mae_32", "mae_std", "max_error", "rmse"
+        "Model", "Mode", "Period", "Description", "MAE", "MAE_16", "MAE_32", "MAE_STD", "MAX_ERROR", "RMSE"
     ]
 
-    csv_path = save_to_csv(RESULT_CSV_PATH, all_results, columns)
-    print(f"\nDetailed results saved to CSV: {csv_path}")
-    
+    df_results = pd.DataFrame(all_results, columns=columns)
+    all_results_csv_path = save_to_csv(RESULT_CSV_PATH, df_results, index=False)
+    print(f"\nAll results saved to CSV: {all_results_csv_path}")
+
     return all_results, result_details
 
 

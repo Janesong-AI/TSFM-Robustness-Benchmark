@@ -34,7 +34,7 @@ Import Path Examples:
 
 >>> # Utils layer usage (for core layer developers)
 >>> from utils.files import save_to_csv, append_to_csv
->>> from utils.metrics import calc_metrics, calc_diff
+>>> from utils.metrics import calc_metrics, calc_diff, evaluate_prediction
 >>> from utils.data_sanitizer import clean_nan_values, safe_float
 """
 
@@ -61,7 +61,8 @@ from .files import (
 )
 from .metrics import (
     calc_metrics,
-    calc_diff
+    calc_diff,
+    evaluate_prediction
 )
 
 __all__ = [
@@ -86,4 +87,5 @@ __all__ = [
     # --- metrics.py ---
     "calc_metrics",
     "calc_diff",
+    "evaluate_prediction",
 ]
