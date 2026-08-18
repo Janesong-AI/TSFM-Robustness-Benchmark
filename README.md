@@ -1,6 +1,6 @@
 # TSFM Robustness Benchmark
 
-[English](./README.md) | [中文](./ReadMe-zh.md)
+[English](./README.md) | [中文](./README-zh.md)
 
 The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate the engineering robustness of Time Series Foundation Models (TSFMs) in edge cases (e.g., frequency mismatch, data contamination, covariate interference). This release includes a systematic evaluation of TimechoAI as the first targeted model. More models will be integrated in subsequent iterations.
 

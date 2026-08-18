@@ -1,6 +1,6 @@
 # TSFM Robustness Benchmark
 
-[English](./README.md) | [中文](./ReadMe-zh.md)
+[English](./README.md) | [中文](./README-zh.md)
 
 TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间序列基础模型在边缘场景(如频率不匹配、数据污染、协变量干扰等)下的工程鲁棒性.
 本次版本包含对TimechoAI作为首个靶向模型的系统性评估, 更多模型将在后续迭代中逐步整合.
@@ -49,7 +49,7 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
 > **Windows PowerShell 用户注意**: 若遇到“禁止运行脚本”的报错, 请以管理员身份运行 PowerShell 并执行:   
 > `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
-- **运行**:  
+- **运行**:   
    `python run.py features.futureCovs.conceptDrift.concept_drift_test_v1`   # 概念漂移测试(简约版)  
    `python run.py features.futureCovs.conceptDrift.concept_drift_test_v2`   # 概念漂移测试(XYZ场景)  
    `python run.py features.futureCovs.covariant.cov_test`                # 协变量有效性  
