@@ -18,9 +18,8 @@ Author: Janesong
 Create Date: 2026/07/19, Updated on 2026/08/17.
 """
 
-import pandas as pd
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Any
 from core.resume import is_rate_limited
 from utils.files import append_to_csv, csv_exists_and_not_empty, read_csv_to_list
 
@@ -43,15 +42,15 @@ class _ResultBufferManager:
         Args:
             default_batch_size: Default batch size for auto-flush (default 20)
         """
-        self._buffers: Dict[str, List[Dict[str, Any]]] = {}
-        self._batch_sizes: Dict[str, int] = {}
+        self._buffers: dict[str, list[dict[str, Any]]] = {}
+        self._batch_sizes: dict[str, int] = {}
         self._default_batch_size = default_batch_size
 
     def append(
         self,
         file_path: str,
-        result: Dict[str, Any],
-        batch_size: Optional[int] = None
+        result: dict[str, Any],
+        batch_size: int | None = None
     ) -> int:
         """
         Append result to buffer, return current buffer size.
@@ -67,13 +66,14 @@ class _ResultBufferManager:
         # Initialize buffer if not exists
         if file_path not in self._buffers:
             self._buffers[file_path] = []
-            self._batch_sizes[file_path] = batch_size or self._default_batch_size
+            if batch_size is not None:
+                self._batch_sizes[file_path] = batch_size
+            elif file_path not in self._batch_sizes:
+                self._batch_sizes[file_path] = self._default_batch_size
 
         # Append to buffer
         self._buffers[file_path].append(result)
-        current_size = len(self._buffers[file_path])
-
-        return current_size
+        return len(self._buffers[file_path])
 
     def should_flush(self, file_path: str) -> bool:
         """Check if buffer should be flushed."""
@@ -109,7 +109,7 @@ class _ResultBufferManager:
             print(f"  Failed to flush buffer: {exp}")
             raise
 
-    def flush_all(self) -> Dict[str, int]:
+    def flush_all(self) -> dict[str, int]:
         """
         Flush all buffers (call this before program exit).
 
@@ -133,7 +133,7 @@ class _ResultBufferManager:
 _buffer_manager = _ResultBufferManager(default_batch_size=20)
 
 
-def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict], int]:
+def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict[str, Any]], int]:
     """
     Load historical results from CSV with error classification.
     
@@ -146,9 +146,9 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict], int]:
         result_csv_path_file: Result CSV file path
 
     Returns:
-        (all_records, perm_fail_count)
+        (all_records, non_rate_limit_error)
         - all_records: List of all records (each row as dict)
-        - perm_fail_count: Count of permanent failures
+        - non_rate_limit_error: Count of non-rate-limit errors
     """
     if not csv_exists_and_not_empty(result_csv_path_file):
         print(f"{Path(result_csv_path_file).name} not found, starting fresh")
@@ -158,7 +158,7 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict], int]:
         all_records = read_csv_to_list(result_csv_path_file)
 
         # Classify error types
-        perm_fail_count = 0
+        non_rate_limit_error = 0
         retry_count = 0
 
         for record in all_records:
@@ -170,19 +170,20 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict], int]:
             if is_rate_limited(str(record.get("error", ""))):
                 retry_count += 1
             else:
-                perm_fail_count += 1
+                non_rate_limit_error += 1
 
         msg = f"Loaded {Path(result_csv_path_file).name}: {len(all_records)} records"
-        success_count = len(all_records) - perm_fail_count - retry_count
+        success_count = len(all_records) - non_rate_limit_error - retry_count
         msg += f" (Success: {success_count}"
 
-        if perm_fail_count > 0:
-            msg += f", Failed: {perm_fail_count}"
+        if non_rate_limit_error > 0:
+            msg += f", Failed: {non_rate_limit_error}"
         if retry_count > 0:
             msg += f", Pending Retry: {retry_count}"
         msg += ")"
+        print(msg)
 
-        return all_records, perm_fail_count
+        return all_records, non_rate_limit_error
 
     except Exception as exp:
         print(f"Failed to load {Path(result_csv_path_file).name}: {exp}")
@@ -191,7 +192,7 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict], int]:
 
 def append_result_to_csv(
     result_csv_path_file: str,
-    result: Dict[str, Any],
+    result: dict[str, Any],
     batch_size: int = 20,
     force_flush: bool = False,
     validate: bool = True
@@ -203,17 +204,17 @@ def append_result_to_csv(
         - Batch buffering to reduce I/O overhead
         - Auto-flush when buffer reaches batch_size
         - Independent buffer per file (safe for concurrent tasks)
-    
+
     Usage:
         # Normal append (buffered)
         append_result_to_csv("./results.csv", result)
-        
+
         # Force flush immediately
         append_result_to_csv("./results.csv", result, force_flush=True)
-        
+
         # Custom batch size
         append_result_to_csv("./results.csv", result, batch_size=50)
-    
+
     Args:
         result_csv_path_file: Result CSV file path
         result: Single result dictionary
@@ -240,7 +241,7 @@ def append_result_to_csv(
         print(f"Flushed buffer (size={current_size}) for {Path(result_csv_path_file).name}")
 
 
-def flush_all_results() -> Dict[str, int]:
+def flush_all_results() -> dict[str, int]:
     """
     Flush all result buffers (call before program exit).
 
@@ -256,10 +257,10 @@ def flush_all_results() -> Dict[str, int]:
     return _buffer_manager.flush_all()
 
 
-def get_results(results_data: List[Dict[str, Any]], 
+def get_results(results_data: list[dict[str, Any]], 
                model_id: str,
                scene_prefix: str,
-               pass_name: str = "Preprocessed") -> Optional[Dict[str, Any]]:
+               pass_name: str = "Preprocessed") -> dict[str, Any] | None:
     """
     Retrieve the first matching test result for a specific model, scene, and pass.
     
@@ -272,7 +273,7 @@ def get_results(results_data: List[Dict[str, Any]],
 
     Returns:
         Matching result dictionary, or None if not found
-    
+
     Example:
         >>> results = [
         ...     {"model_id": "Timer-3.5", "scene": "S0-Clean[Preprocessed]", "pass": "Preprocessed", "mae": 0.5},
@@ -288,8 +289,8 @@ def get_results(results_data: List[Dict[str, Any]],
             return record
     return None
 
-def get_results_by_model(results_data: List[Dict[str, Any]], 
-                         model_id: str) -> List[Dict[str, Any]]:
+def get_results_by_model(results_data: list[dict[str, Any]], 
+                         model_id: str) -> list[dict[str, Any]]:
     """
     Retrieve all results for a specific model.
 
@@ -310,8 +311,8 @@ def get_results_by_model(results_data: List[Dict[str, Any]],
     """
     return [record for record in results_data if record.get("model_id") == model_id]
 
-def get_results_by_scene(results_data: List[Dict[str, Any]], 
-                         scene_prefix: str) -> List[Dict[str, Any]]:
+def get_results_by_scene(results_data: list[dict[str, Any]],
+                         scene_prefix: str) -> list[dict[str, Any]]:
     """
     Retrieve all results for a specific scene prefix.
 
@@ -330,11 +331,10 @@ def get_results_by_scene(results_data: List[Dict[str, Any]],
         >>> get_results_by_scene(results, "S0")
         [{'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass': 'Preprocessed', 'mae': 0.5}]
     """
-    return [record for record in results_data 
-            if record.get("scene", "").startswith(scene_prefix)]
+    return [record for record in results_data  if record.get("scene", "").startswith(scene_prefix)]
 
-def get_results_by_pass(results_data: List[Dict[str, Any]], 
-                        pass_name: str) -> List[Dict[str, Any]]:
+def get_results_by_pass(results_data: list[dict[str, Any]], 
+                        pass_name: str) -> list[dict[str, Any]]:
     """
     Retrieve all results for a specific pass.
 
