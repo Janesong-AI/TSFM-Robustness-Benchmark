@@ -34,7 +34,7 @@ Create Date: 2026/07/12, Updated on 2026/08/14.
 import time
 import numpy as np
 import pandas as pd
-from typing import Tuple, Dict, List, Any
+from typing import Any
 
 from config.settings import OUTPUT_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
@@ -65,7 +65,7 @@ SCENARIOS = [
 # ============================================================
 # 1. Signal Generation Functions
 # ============================================================
-def _generate_base_signal(seed: int = 42) -> Tuple[np.ndarray, pd.DatetimeIndex, np.ndarray]:
+def _generate_base_signal(seed: int = 42) -> tuple[np.ndarray, pd.DatetimeIndex, np.ndarray]:
     """
     Generate base signal with trend, seasonality, and noise.
 
@@ -178,7 +178,7 @@ def _make_test_result(
     elapsed_ms: float,
     success: bool,
     error: str | None
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Create a standardized test result dictionary.
     
@@ -212,7 +212,7 @@ def _make_test_result(
 # ============================================================
 # 3. Timestamp Usage Analysis
 # ============================================================
-def _analyze_timestamp_usage(results: List[Dict]) -> Dict[str, Any]:
+def _analyze_timestamp_usage(results: list[dict]) -> dict[str, Any]:
     """
     Analyze whether SDK utilized timestamp semantics based on metric variance.
     
@@ -292,18 +292,18 @@ def _analyze_timestamp_usage(results: List[Dict]) -> Dict[str, Any]:
 # 4. Main Test Function
 # ============================================================
 def run_irregular_sampling_test(
-    models: List[str] = None,
-    scenarios: List[str] = None,
+    models: list[str] | None = None,
+    scenarios: list[str] | None = None,
     verbose: bool = True
-) -> Tuple[List[Dict], Dict[str, Any]]:
+) -> tuple[list[dict], dict[str, Any]]:
     """
     Execute irregular sampling robustness test.
-    
+
     Args:
         models: List of model IDs to test (default: MODELS)
         scenarios: List of scenario names (default: SCENARIOS)
         verbose: Whether to print progress info
-    
+
     Returns:
         results: List of test result dictionaries
             Each dict contains: scenario, model_id, mae, rmse, latency_ms, success, error
@@ -311,9 +311,9 @@ def run_irregular_sampling_test(
             Contains: analysis, config, summary
     """
     # Use default parameters if not provided
-    models = models or MODELS
-    scenarios = scenarios or SCENARIOS
-    
+    models = MODELS if models is None else models
+    scenarios = SCENARIOS if scenarios is None else scenarios
+
     if verbose:
         print("=" * 80)
         print("Scenario A: Variable Sampling Rate & Irregular Timestamp Test")
@@ -322,10 +322,10 @@ def run_irregular_sampling_test(
     
     # Step 1: Generate base signal (identical for all scenarios)
     target_values, ideal_dates, ground_truth = _generate_base_signal(seed=42)
-    
+
     # Step 2: Execute tests across all scenarios and models
     results = []
-    
+
     for scenario in scenarios:
         if verbose:
             print(f"\n[Scenario] {scenario}")
@@ -395,7 +395,6 @@ def run_irregular_sampling_test(
                         print(f"   [{model_id}] Success MAE={result['mae']:.4f}  RMSE={result['rmse']:.4f}  MAPE={result['mape']:.2f}%  Latency={elapsed_ms:.0f}ms")
 
                 results.append(result)
-            
             except Exception as exp:
                 elapsed_ms = (time.perf_counter() - t0) * 1000
                 result = _make_test_result(
@@ -435,7 +434,7 @@ def run_irregular_sampling_test(
 # ============================================================
 # 5. Results Reporting
 # ============================================================
-def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> None:
+def _print_results_summary(results: list[dict], analysis: dict[str, Any]) -> None:
     """
     Print formatted summary of test results and analysis.
     
@@ -449,7 +448,7 @@ def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> Non
 
     print(f"\n{'Scenario':>22s} | {'Model':>12s} | {'MAE':>10s} | {'RMSE':>10s} | {'MAPE':>10s} | {'Latency(ms)':>12s} | Status")
     print("-" * 100)
-    
+
     for r in results:
         if r["success"]:
             # Success: Display all metrics
@@ -467,17 +466,17 @@ def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> Non
     print("\n" + "=" * 80)
     print("Core Analysis: Does the SDK Understand Timestamp Semantics?")
     print("=" * 80)
-    
+
     for model_id, model_analysis in analysis["model_analysis"].items():
         print(f"\n  [{model_id}]")
         
         if model_analysis.get("status") == "insufficient_data":
             print(f"     Insufficient successful scenarios, unable to analyze")
             continue
-        
+
         baseline_mae = model_analysis["baseline_mae"]
         mae_values = model_analysis["mae_values"]
-        
+
         for scenario, mae in mae_values.items():
             if baseline_mae > 0:
                 ratio = mae / baseline_mae
@@ -490,7 +489,7 @@ def _print_results_summary(results: List[Dict], analysis: Dict[str, Any]) -> Non
             print(f"     [Warning] {conclusion} -> SDK might ignore time_col and process by row index only")
         else:
             print(f"     [Pass] {conclusion}")
-    
+
     print(f"\nOverall Conclusion: {analysis['overall_conclusion']}")
 
 
@@ -533,3 +532,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
