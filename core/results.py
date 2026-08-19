@@ -263,29 +263,29 @@ def get_results(results_data: list[dict[str, Any]],
                pass_name: str = "Preprocessed") -> dict[str, Any] | None:
     """
     Retrieve the first matching test result for a specific model, scene, and pass.
-    
+
     Args:
         results_data: List of result dictionaries (typically from CSV).
         model_id: Model identifier (e.g., "Timer-3.0", "Timer-3.5")
         scene_prefix: Scene prefix to match (e.g., "S0", "S1", "S4")
                      Uses prefix matching, so "S0" matches "S0-Clean[Preprocessed]".
-        pass_name: Pass name ("Raw" or "Preprocessed"). Defaults to "Preprocessed".
+        pass_name: Pass name ("Preprocessed" or "Raw"). Defaults to "Preprocessed".
 
     Returns:
         Matching result dictionary, or None if not found
 
     Example:
         >>> results = [
-        ...     {"model_id": "Timer-3.5", "scene": "S0-Clean[Preprocessed]", "pass": "Preprocessed", "mae": 0.5},
-        ...     {"model_id": "Timer-3.0", "scene": "S1-Missing5%[Raw]", "pass": "Raw", "mae": None}
+        ...     {"model_id": "Timer-3.5", "scene": "S0-Clean[Preprocessed]", "pass_name": "Preprocessed", "mae": 0.5},
+        ...     {"model_id": "Timer-3.0", "scene": "S1-Missing5%[Raw]", "pass_name": "Raw", "mae": None}
         ... ]
         >>> get_results(results, "Timer-3.5", "S0", "Preprocessed")
-        {'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass': 'Preprocessed', 'mae': 0.5}
+        {'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass_name': 'Preprocessed', 'mae': 0.5}
     """
     for record in results_data:
         if (record.get("model_id") == model_id and 
             record.get("scene", "").startswith(scene_prefix) and 
-            record.get("pass") == pass_name):
+            record.get("pass_name") == pass_name):
             return record
     return None
 
@@ -303,11 +303,11 @@ def get_results_by_model(results_data: list[dict[str, Any]],
 
     Example:
         >>> results = [
-        ...     {"model_id": "Timer-3.0", "scene": "S0-Clean[Preprocessed]", "pass": "Preprocessed", "mae": 0.5},
-        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass": "Raw", "mae": None}
+        ...     {"model_id": "Timer-3.0", "scene": "S0-Clean[Preprocessed]", "pass_name": "Preprocessed", "mae": 0.5},
+        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass_name": "Raw", "mae": None}
         ... ]
         >>> get_results_by_model(results, "Timer-3.5")
-        [{'model_id': 'Timer-3.5', 'scene': 'S1-Missing5%[Raw]', 'pass': 'Raw', 'mae': None}]
+        [{'model_id': 'Timer-3.5', 'scene': 'S1-Missing5%[Raw]', 'pass_name': 'Raw', 'mae': None}]
     """
     return [record for record in results_data if record.get("model_id") == model_id]
 
@@ -325,35 +325,35 @@ def get_results_by_scene(results_data: list[dict[str, Any]],
 
     Example:
         >>> results = [
-        ...     {"model_id": "Timer-3.5", "scene": "S0-Clean[Preprocessed]", "pass": "Preprocessed", "mae": 0.5},
-        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass": "Raw", "mae": None}
+        ...     {"model_id": "Timer-3.5", "scene": "S0-Clean[Preprocessed]", "pass_name": "Preprocessed", "mae": 0.5},
+        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass_name": "Raw", "mae": None}
         ... ]
         >>> get_results_by_scene(results, "S0")
-        [{'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass': 'Preprocessed', 'mae': 0.5}]
+        [{'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass_name': 'Preprocessed', 'mae': 0.5}]
     """
     return [record for record in results_data  if record.get("scene", "").startswith(scene_prefix)]
 
-def get_results_by_pass(results_data: list[dict[str, Any]], 
+def get_results_by_passname(results_data: list[dict[str, Any]], 
                         pass_name: str) -> list[dict[str, Any]]:
     """
     Retrieve all results for a specific pass.
 
     Args:
         results_data: List of result dictionaries.
-        pass_name: Pass name ("Raw" or "Preprocessed").
+        pass_name: Pass name ("Preprocessed" or "Raw").
 
     Returns:
         List of matching result dictionaries. Empty list if none found.
 
     Example:
         >>> results = [
-        ...     {"model_id": "Timer-3.0", "scene": "S0-Clean[Preprocessed]", "pass": "Preprocessed", "mae": 0.5},
-        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass": "Raw", "mae": None}
+        ...     {"model_id": "Timer-3.0", "scene": "S0-Clean[Preprocessed]", "pass_name": "Preprocessed", "mae": 0.5},
+        ...     {"model_id": "Timer-3.5", "scene": "S1-Missing5%[Raw]", "pass_name": "Raw", "mae": None}
         ... ]
-        >>> get_results_by_pass(results, "Preprocessed")
-        [{'model_id': 'Timer-3.0', 'scene': 'S0-Clean[Preprocessed]', 'pass': 'Preprocessed', 'mae': 0.5}]
+        >>> get_results_by_passname(results, "Preprocessed")
+        [{'model_id': 'Timer-3.0', 'scene': 'S0-Clean[Preprocessed]', 'pass_name': 'Preprocessed', 'mae': 0.5}]
     """
-    return [record for record in results_data if record.get("pass") == pass_name]
+    return [record for record in results_data if record.get("pass_name") == pass_name]
 
 
 def _normalize_result(result: dict) -> dict:

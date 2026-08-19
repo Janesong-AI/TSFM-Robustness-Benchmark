@@ -40,10 +40,10 @@ RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction result
 # ============================================================
 completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
-completed_keys = set()  # Build key set for completed tests (model_id, scene, pass)
+completed_keys = set()  # Build key set for completed tests (model_id, scene, pass_name)
 retry_keys = set()      # Rate limit errors pending retry
 for record in completed_records:
-    key = (record.get("model_id"), record.get("scene"), record.get("pass"))
+    key = (record.get("model_id"), record.get("scene"), record.get("pass_name"))
     if record.get("success") == True:
         completed_keys.add(key)
     elif is_rate_limited(str(record.get("error", ""))):
@@ -84,7 +84,7 @@ def _make_base_record(model_id, csv_file, nan_count, ground_truth):
         "model_id": model_id,
         "scene": None,
         "csv_file": csv_file,
-        "pass": None,
+        "pass_name": None,
         "success": None,
         "mae": None,
         "rmse": None,
@@ -103,7 +103,7 @@ def _make_base_record(model_id, csv_file, nan_count, ground_truth):
 # Test by scene * model
 # ============================================================
 
-api_call_count = 0    # API call counter
+api_call_count = 0     # API call counter
 success_count = 0
 fail_count = 0
 
@@ -147,7 +147,7 @@ for model_id in MODEL_LIST:
             # If rate-limited retry needed, notify user
             if test_key in retry_keys:
                 print(f"     [{pass_name}] Retrying (previous 429 rate limit)")
-            
+
             # Fill covariate NaNs in both passes to prevent API errors
             # (Covariate NaNs are not the focus of this test and would cause API rejection)
             if not is_univariate and "cov" in pass_df.columns:
@@ -201,13 +201,13 @@ for model_id in MODEL_LIST:
                         print(f"     [{pass_name}] Rate limited (429), recorded, will retry next time")
                     else:
                         print(f"     [{pass_name}] Failed: {error[:80]}")
-                    
+
                     fail_count += 1
 
                     result_record = {
                         **scene_base,
                         "scene": label,
-                        "pass": pass_name,
+                        "pass_name": pass_name,
                         "success": False,
                         "latency_ms": elapsed_ms,
                         "error": error,
@@ -233,7 +233,7 @@ for model_id in MODEL_LIST:
                     result_record = {
                         **scene_base,
                         "scene": label,
-                        "pass": pass_name,
+                        "pass_name": pass_name,
                         "success": True,
                         "mae": metrics["MAE"],
                         "rmse": metrics["RMSE"],
@@ -260,7 +260,7 @@ for model_id in MODEL_LIST:
                 result_record = {
                     **scene_base,
                     "scene": label,
-                    "pass": pass_name,
+                    "pass_name": pass_name,
                     "success": False,
                     "latency_ms": 0,
                     "error": error_msg,
@@ -318,7 +318,12 @@ for model_id in MODEL_LIST:
 
         # Raw pass results
         if r_raw and not r_raw["success"]:
-            print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): API doesn't support NaN input")
+            if "API doesn't support NaN input" in str(r_raw.get("error", "")):
+                print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): API doesn't support NaN input")
+            else:
+                print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): Error ({r_raw.get('error', '')[:30]})")
+
+        # Preprocessed pass results
         if r_pre and r_pre["success"]:
             ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
             verdict = " No impact" if ratio < 1.5 else (" Slight degradation" if ratio < 3 else " Significant degradation")
@@ -336,10 +341,17 @@ for model_id in MODEL_LIST:
     # Mixed Dirty Data
     print(f"\n     Mixed Dirty Data (based on [Preprocessed] results):")
     r_pre = get_results(results_data, model_id, "S6", "Preprocessed")
+    r_raw = get_results(results_data, model_id, "S6", "Raw")
+
+    if r_raw and not r_raw["success"]:
+        if "API doesn't support NaN input" in str(r_raw.get("error", "")):
+            print(f"      S6-MixedDirty (Raw): API doesn't support NaN input")
+
     if r_pre and r_pre["success"]:
         ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
         verdict = " Explosion/Collapse!" if r_pre["is_explosion"] else (" Production-ready" if ratio < 1.5 else " Not usable")
         print(f"      S6-MixedDirty (Preprocessed): MAE={r_pre['mae']:.4f} ({ratio:.1f}x of baseline) -> {verdict}")
+
     print()
 
 # ============================================================

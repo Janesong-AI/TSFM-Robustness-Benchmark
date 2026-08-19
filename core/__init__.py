@@ -39,7 +39,7 @@ from .results import (
     get_results,
     get_results_by_model,
     get_results_by_scene,
-    get_results_by_pass,
+    get_results_by_passname,
 )
 
 from .resume import (
@@ -61,7 +61,7 @@ __all__ = [
     "get_results",
     "get_results_by_model",
     "get_results_by_scene",
-    "get_results_by_pass",
+    "get_results_by_passname",
     # --- resume.py ---
     "is_rate_limited",
     "should_skip_test",

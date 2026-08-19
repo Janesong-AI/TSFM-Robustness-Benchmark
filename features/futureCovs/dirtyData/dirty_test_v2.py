@@ -40,10 +40,10 @@ RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result_v2.csv"    # Prediction res
 # ============================================================
 completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
-completed_keys = set()  # Build key set for completed tests (model_id, scene, pass)
+completed_keys = set()  # Build key set for completed tests (model_id, scene, pass_name)
 retry_keys = set()      # Rate limit errors pending retry
 for record in completed_records:
-    key = (record.get("model_id"), record.get("scene"), record.get("pass"))
+    key = (record.get("model_id"), record.get("scene"), record.get("pass_name"))
     if record.get("success") == True:
         completed_keys.add(key)
     elif is_rate_limited(str(record.get("error", ""))):
@@ -84,7 +84,7 @@ def _make_base_record(model_id, csv_file, nan_count, ground_truth):
         "model_id": model_id,
         "scene": None,
         "csv_file": csv_file,
-        "pass": None,
+        "pass_name": None,
         "success": None,
         "mae": None,
         "rmse": None,
@@ -148,7 +148,7 @@ for model_id in MODEL_LIST:
             # If rate-limited retry needed, notify user
             if test_key in retry_keys:
                 print(f"     [{pass_name}] Retrying (previous 429 rate limit)")
-            
+
             target_nan_count = pass_df["target"].isna().sum()
             cov_nan_count = pass_df["cov"].isna().sum() if "cov" in pass_df.columns else 0
 
@@ -158,12 +158,12 @@ for model_id in MODEL_LIST:
             if pass_name == "Raw" and (target_nan_count > 0 or cov_nan_count > 0):
                 print(f"     [{pass_name}] Skipped test (API doesn't support NaN: target={target_nan_count}, cov={cov_nan_count})")
                 skipped_nan_count += 1
-                
+
                 # Record failure result (explicitly note reason)
                 result_record = {
                     **scene_base,
                     "scene": label,
-                    "pass": pass_name,
+                    "pass_name": pass_name,
                     "success": False,
                     "latency_ms": 0,
                     "error": "API doesn't support NaN input (raw data contains missing values)"
@@ -177,7 +177,7 @@ for model_id in MODEL_LIST:
                 if target_nan_count > 0:
                     pass_df["target"] = pass_df["target"].ffill().bfill()
                     print(f"     [{pass_name}] Target column preprocessing: Filled {target_nan_count} NaN values")
-                
+
                 if cov_nan_count > 0:
                     pass_df["cov"] = pass_df["cov"].ffill().bfill()
                     print(f"     [{pass_name}] Covariate column preprocessing: Filled {cov_nan_count} NaN values")
@@ -215,13 +215,13 @@ for model_id in MODEL_LIST:
                         print(f"     [{pass_name}] Rate limited (429), recorded, will retry next time")
                     else:
                         print(f"     [{pass_name}] Failed: {error[:80]}")
-                    
+
                     fail_count += 1
 
                     result_record = {
                         **scene_base,
                         "scene": label,
-                        "pass": pass_name,
+                        "pass_name": pass_name,
                         "success": False,
                         "latency_ms": elapsed_ms,
                         "error": error,
@@ -247,7 +247,7 @@ for model_id in MODEL_LIST:
                     result_record = {
                         **scene_base,
                         "scene": label,
-                        "pass": pass_name,
+                        "pass_name": pass_name,
                         "success": True,
                         "mae": metrics["MAE"],
                         "rmse": metrics["RMSE"],
@@ -274,7 +274,7 @@ for model_id in MODEL_LIST:
                 result_record = {
                     **scene_base,
                     "scene": label,
-                    "pass": pass_name,
+                    "pass_name": pass_name,
                     "success": False,
                     "latency_ms": 0,
                     "error": error_msg,
@@ -332,7 +332,7 @@ for model_id in MODEL_LIST:
 
         # Raw pass results
         if r_raw and not r_raw["success"]:
-            if "API doesn't support NaN input" in str(r_raw.get("error", "")): 
+            if "API doesn't support NaN input" in str(r_raw.get("error", "")):
                 print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): API doesn't support NaN input")
             else:
                 print(f"      {r_raw['scene'].replace('[Raw]',''):>14s} (Raw): Error ({r_raw.get('error', '')[:30]})")
@@ -355,16 +355,17 @@ for model_id in MODEL_LIST:
     # Analyze mixed scenario
     print(f"\n     Mixed Dirty Data (based on [Preprocessed] results):")
     r_pre = get_results(results_data, model_id, "S6", "Preprocessed")
-    r_pre = get_results(results_data, model_id, "S6", "Raw")
-    
+    r_raw = get_results(results_data, model_id, "S6", "Raw")
+
     if r_raw and not r_raw["success"]:
         if "API doesn't support NaN input" in str(r_raw.get("error", "")):
             print(f"      S6-MixedDirty (Raw): API doesn't support NaN input")
-    
+
     if r_pre and r_pre["success"]:
         ratio = r_pre["mae"] / baseline_mae if baseline_mae > 0 else float("inf")
         verdict = " Explosion/Collapse!" if r_pre["is_explosion"] else (" Production-ready" if ratio < 1.5 else " Not usable")
         print(f"      S6-MixedDirty (Preprocessed): MAE={r_pre['mae']:.4f} ({ratio:.1f}x of baseline) -> {verdict}")
+
     print()
 
 # ============================================================
