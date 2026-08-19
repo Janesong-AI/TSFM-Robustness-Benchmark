@@ -28,22 +28,22 @@ Author: Janesong
 Create Date: 2026/07/10, Updated on 2026/08/17.
 """
 
-from typing import Set, Tuple, Any
+from typing import Any
 
 # Rate limit keywords for detection
 RATE_LIMIT_KEYWORDS = ["429", "limit", "quota", "exceed", "rate", "too many"]
 def is_rate_limited(error_msg: str) -> bool:
     """
     Check if error is rate-limit (429 Too Many Requests) error.
-    
+
     This method detects rate limit errors based on common keywords in error messages returned by API providers.
-    
+
     Args:
         error_msg: Error message string
 
     Returns:
         True if rate-limit error, False otherwise
-    
+
     Example:
         >>> is_rate_limited("Error 429: Too Many Requests")
         True
@@ -60,9 +60,9 @@ def is_rate_limited(error_msg: str) -> bool:
 
 
 def should_skip_test(
-    completed_keys: Set[Tuple[Any, ...]], 
-    test_key: Tuple[Any, ...],
-    failed_keys: Set[Tuple[Any, ...]] = None
+    completed_keys: set[tuple[Any, ...]], 
+    test_key: tuple[Any, ...],
+    failed_keys: set[tuple[Any, ...]] = None
 ) -> bool:
     """
     Determine if a test should be skipped (already completed or permanently failed).
@@ -92,9 +92,9 @@ def should_skip_test(
 
 
 def build_completed_keys(
-    records: list, 
-    key_columns: list
-) -> tuple[Set[Tuple[Any, ...]], Set[Tuple[Any, ...]]]:
+    records: list[dict], 
+    key_columns: list[str]
+) -> tuple[set[tuple[Any, ...]], set[tuple[Any, ...]]]:
     """
     Build completed and failed test key sets from records.
 
@@ -103,7 +103,7 @@ def build_completed_keys(
     Args:
         records: List of result dictionaries (from CSV)
         key_columns: List of column names to build key (e.g., ["model_id", "scene"])
-    
+
     Returns:
         (completed_keys, failed_keys)
         - completed_keys: Set of successfully completed test keys
@@ -126,9 +126,9 @@ def build_completed_keys(
     for record in records:
         # Build key from specified columns
         key = tuple(record.get(col) for col in key_columns)
-        
+
         success_val = str(record.get("success", "")).strip().lower()
-        
+
         if success_val == "true":
             # Successfully completed
             completed_keys.add(key)
@@ -139,6 +139,6 @@ def build_completed_keys(
                 # Permanent failure, should skip
                 failed_keys.add(key)
             # Rate limit errors should be retried, not added to failed_keys
-    
+
     return completed_keys, failed_keys
 
