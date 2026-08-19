@@ -79,7 +79,7 @@ Create Date: 2026/07/21.
 import time
 import numpy as np
 import pandas as pd
-from typing import Dict, Any
+from typing import Any
 
 from config.settings import OUTPUT_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
@@ -356,14 +356,14 @@ def main():
             
     total_needed = TOTAL_RAW - NO_COV_SKIP_COUNT - DEDUP_SKIP_COUNT - perm_fail_count
     success_so_far = len([record for record in completed_records if record.get("success")])
-    
+
     print("=" * 90)
     print(f"总任务: {TOTAL_RAW} | 需完成: {total_needed} | 已完成: {success_so_far} | 永久失败(Skip): {perm_fail_count}")
     print("=" * 90)
-    
+
     stop_run = False
     runned = 0
-    
+
     # 主测试
     for sc in scenarios:
         if stop_run: break
@@ -373,11 +373,11 @@ def main():
                 if sc["category"] == "Z" and mid in NO_COV_MODELS: continue
                 key = (sc["scenario_id"], mid, il, True)
                 if key in completed_keys: continue
-                
+
                 res = run_forecast(sc, mid, il)
                 append_result_to_csv(str(RESULT_CSV_PATH), res)
                 runned += 1
-                
+
                 if res["success"]:
                     print(f"[{sc['scenario_id']}] {mid:14s} in={il} MAE={res['mae']:.4f}")
                 else:
