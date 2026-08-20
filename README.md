@@ -20,6 +20,7 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    - `client.py`: Low-level Client Connection.
    - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
    - `files.py`: File Operation Utils.
+   - `log/`: Logging Management Module. (Encapsulates core logging logic, formatters, and context handlers).
    - `metrics.py`: Evaluation Metrics Calculator.
 - `run.py`: Unified entry point; configures `sys.path` and dispatches execution by module name or file path.
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
