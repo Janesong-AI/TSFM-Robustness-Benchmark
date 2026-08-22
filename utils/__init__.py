@@ -3,7 +3,7 @@
 """
 utils - Infrastructure Utility Layer
 
-This package provides stateless pure functions and generic entity wrappers, serving as the 
+This package provides stateless pure functions and generic entity wrappers, serving as the
 underlying support for the entire project. It currently includes:
 
 Modules:
@@ -29,6 +29,10 @@ metrics.py — Evaluation Metrics Calculator
   Provides standard evaluation metrics (MAE, RMSE, MAPE) for time series forecasting models.
   Pure mathematical calculation functions without side effects.
 
+runner.py — Test Runner Core
+  Test discovery (AST static analysis), single-case execution (timeout + retry), result tracking.
+  Provides the execution primitives shared by run.py, conftest.py, and core/resume.py.
+
 Usage Conventions:
 --------------------------
 1. Business modules (e.g., features/) should access TimechoAI services indirectly through core.timecho.
@@ -46,6 +50,7 @@ Import Path Examples:
 >>> from utils.log import get_logger, setup_logging
 >>> from utils.metrics import calc_metrics, calc_diff, evaluate_prediction
 >>> from utils.data_sanitizer import clean_nan_values, safe_float
+>>> from utils.runner import parse_module_path
 """
 
 from .client import (
@@ -86,6 +91,10 @@ from .metrics import (
     calc_diff,
     evaluate_prediction
 )
+# ── runner.py must be imported AFTER utils.log ──────────────
+from .runner import (
+    parse_module_path,
+)
 
 __all__ = [
     # --- client.py ---
@@ -121,4 +130,6 @@ __all__ = [
     "calc_metrics",
     "calc_diff",
     "evaluate_prediction",
+    # --- runner.py ---
+    "parse_module_path",
 ]

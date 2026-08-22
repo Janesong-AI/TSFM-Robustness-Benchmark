@@ -4,65 +4,121 @@
 TSFM-Robustness-Benchmark — Unified Entry Point
 
 Usage:
-  python run.py features.futureCovs.conceptDrift.test
-  python run.py ./features/futureCovs/conceptDrift/test.py
+  # Single test case
+  python run.py features.futureCovs.dirtyData.dirty_test
+  python run.py features.futureCovs.conceptDrift.concept_drift_test
+
+  # File path is also acceptable
+  python run.py ./features/futureCovs/dirtyData/dirty_test.py
+  python run.py ./features/futureCovs/conceptDrift/concept_drift_test.py
+
+  # To run all cases in batch, please use pytest
+  #   pytest features/
+  #   pytest features/ -k dirty
+  #   pytest features/ -k concept_drift -v
+
+Environment Variable Options:
+  LOG_LEVEL=DEBUG              Set log level
+  LOG_CONSOLE_OUTPUT=false     Disable console output
+  LOG_FILE_OUTPUT=false        Disable file output
+  LOG_MAX_BYTES=52428800       Set log file size limit (default 50MB)
 """
-import os
+
 import sys
-import importlib
+import logging
+import argparse
+import traceback
 from pathlib import Path
 
-# Bootstrap: Used solely for sys.path setup, not exposed as global variables.
+# Bootstrap: Allow Python to find packages under the project root directory
 _BOOTSTRAP_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from config.settings import PROJECT_ROOT
+from utils.log import get_logger, get_log_file_path, flush_all_logs, get_log_level
+from utils.runner import TestRunner, TestStatus, parse_module_path
 
-# Run the specified module
-if len(sys.argv) < 2:
-    print("Usage: python run.py <module_name>")
-    print("Example: python run.py features.futureCovs.conceptDrift.test")
-    print("         python run.py ./features/futureCovs/conceptDrift/test.py")
-    sys.exit(1)
 
-raw_path = sys.argv[1]
+def main():
+    parser = argparse.ArgumentParser(
+        description="TSFM-Robustness-Benchmark Unified Entry Point",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+For batch execution, please use pytest:
+  pytest features/                    # Run all tests
+  pytest features/ -k dirty           # Filter by name
+  pytest features/ -k concept_drift   # Filter by name
+  pytest features/ -v                 # Verbose output
+""",
+    )
 
-# Auto-detect path format
-if raw_path.startswith("./") or raw_path.endswith(".py") or "/" in raw_path:
-    # File path format: ./features/xxx/test.py
-    file_path = Path(raw_path).resolve()
-    if not file_path.exists():
-        print(f"Error: File does not exist: {file_path}")
+    parser.add_argument(
+        "module",
+        help="Test module path (e.g., features.futureCovs.dirtyData.dirty_test)"
+    )
+
+    args = parser.parse_args()
+
+    # ── Initialize logging ──
+    logger = get_logger("run")
+    log_file_path = get_log_file_path()
+
+    # Log level: int → readable name
+    level_int = get_log_level()
+    level_name = logging.getLevelName(level_int)
+
+    logger.info("=" * 70)
+    logger.info("Project started")
+    logger.info("=" * 70)
+    logger.info(f"Project root: {PROJECT_ROOT}")
+    logger.info(f"Log file: {log_file_path}")
+    logger.info(f"Log level: {level_name} ({level_int})")
+
+    print(f"Project root:   {PROJECT_ROOT}")
+    print(f"Log level:      {level_name}")
+    print(f"Log file:       {log_file_path}")
+    print("-" * 70)
+
+    # ── Path resolution ──
+    try:
+        module_path = parse_module_path(args.module)
+        print(f"Running module: {module_path}")
+        logger.info(f"Started executing module: {module_path}")
+    except FileNotFoundError as exp:
+        print(f"\nError: {exp}")
+        logger.error(str(exp))
         sys.exit(1)
-    
-    # Convert to module path
-    # TSFM-Robustness-Benchmark/features/futureCovs/conceptDrift/test.py
-    # -> features.futureCovs.conceptDrift.test
-    rel_path = file_path.relative_to(PROJECT_ROOT)
-    # Remove .py extension
-    if rel_path.suffix == ".py":
-        rel_path = rel_path.with_suffix("")
-    # Convert to dot-separated
-    module_path = str(rel_path).replace("/", ".")
-    # Compatible with Windows
-    module_path = module_path.replace(os.sep, ".")
-else:
-    # Module path format: features.futureCovs.conceptDrift.test
-    module_path = raw_path
 
-print(f"Running module: {module_path}")
-print(f"Project root:   {PROJECT_ROOT}")
-print("-" * 50)
+    # ── Execution ──
+    runner = TestRunner(logger=logger)
 
-# Import and execute module
-try:
-    module = importlib.import_module(module_path)
-    if hasattr(module, 'main'):
-        module.main()
-except ModuleNotFoundError as exp:
-    print(f"\nError: Module {module_path} not found")
-    print(f"Details: {exp}")
-    print("\nPossible reasons:")
-    print("  1. Module path is incorrect")
-    print("  2. Missing __init__.py file")
-    sys.exit(1)
+    try:
+        result = runner.run_single(module_path)
+
+        if result.status == TestStatus.PASSED:
+            print(f"\n TestPass: {module_path} ({result.duration:.2f}s)")
+        elif result.status == TestStatus.SKIPPED:
+            print(f"\n TestSkip: {module_path}")
+            if result.error:
+                print(f"  {result.error}")
+        else:
+            print(f"\n TestFail: {module_path}")
+            if result.error:
+                print(f"  Error: {result.error}")
+            sys.exit(1)
+
+    except Exception as exp:
+        error_detail = traceback.format_exc()
+        print(f"\nError: {exp}")
+        logger.error(f"Execution failed:\n{error_detail}")
+        sys.exit(1)
+
+    finally:
+        flush_all_logs()
+        logger.info("=" * 70)
+        logger.info("Project finished")
+        logger.info("=" * 70)
+
+
+if __name__ == "__main__":
+    main()

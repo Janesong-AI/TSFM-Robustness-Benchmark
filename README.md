@@ -22,6 +22,7 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
    - `files.py`: File Operation Utils.
    - `log/`: Logging Management Module. (Encapsulates core logging logic, formatters, and context handlers).
    - `metrics.py`: Evaluation Metrics Calculator.
+   - `runner.py`: Test runner core primitives (AST static discovery + single-case execution + in-memory result tracking).
 - `run.py`: Unified entry point; configures `sys.path` and dispatches execution by module name or file path.
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 
