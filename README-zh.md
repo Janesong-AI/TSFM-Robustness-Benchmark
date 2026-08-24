@@ -57,7 +57,7 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    `python run.py features.futureCovs.covariant.cov_test`                # 协变量有效性  
    `python run.py features.futureCovs.covariant.cov_test_models`         # 协变量支持度测试(遍历所有模型)  
    `python run.py features.futureCovs.dirtyData.dirty_test`              # 脏数据鲁棒性(不支持NaN)  
-   `python run.py features.futureCovs.dirtyData.dirty_test_v2`           # 脏数据鲁棒性  
+   `python run.py features.futureCovs.dirtyData.test_dirty_v2`           # 脏数据鲁棒性  
    `python run.py features.futureCovs.forecastHorizon.forecast_horizon_ablation`   # C2 预测步长消融实验  
    `python run.py features.futureCovs.freqMismatch.frequency_mismatch_test`        # C5 频率失配鲁棒性  
    `python run.py features.futureCovs.inputLength.input_length_test`     # Input_length消融测试  
