@@ -42,13 +42,13 @@ LOG_ENCODING: str = os.getenv("LOG_ENCODING", "utf-8")
 # Log format (includes Process ID, for multi-concurrency scenarios)
 LOG_FORMAT: str = os.getenv(
     "LOG_FORMAT",
-    '[%(asctime)s.%(msecs)03d] [%(levelname)8s] [%(process)d] [%(threadName)s] [%(name)s] [%(filename)s:%(lineno)d] - %(message)s'
+    '[%(asctime)s.%(msecs)03d][%(levelname)8s][%(process)d][%(threadName)s][%(name)s][%(filename)s:%(lineno)d] - %(message)s'
 )
 
 # Simplified log format
 LOG_SIMPLE_FORMAT: str = os.getenv(
     "LOG_SIMPLE_FORMAT",
-    '[%(asctime)s.%(msecs)03d] [%(levelname)s] - %(message)s'
+    '[%(asctime)s.%(msecs)03d][%(levelname)s] - %(message)s'
 )
 
 # Date format
