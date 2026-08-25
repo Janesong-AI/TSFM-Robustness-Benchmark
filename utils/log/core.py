@@ -217,31 +217,31 @@ class Logger:
     # ========== Logging Methods ==========
 
     def trace(self, message: str, *args, **kwargs):
-        self.logger.log(logging.TRACE, message, *args, **kwargs)
+        self.logger.log(logging.TRACE, message, *args, **kwargs, stacklevel=2)
 
     def debug(self, message: str, *args, **kwargs):
-        self.logger.debug(message, *args, **kwargs)
+        self.logger.debug(message, *args, **kwargs, stacklevel=2)
 
     def info(self, message: str, *args, **kwargs):
-        self.logger.info(message, *args, **kwargs)
+        self.logger.info(message, *args, **kwargs, stacklevel=2)
 
     def warning(self, message: str, *args, **kwargs):
-        self.logger.warning(message, *args, **kwargs)
+        self.logger.warning(message, *args, **kwargs, stacklevel=2)
 
     def error(self, message: str, *args, **kwargs):
-        self.logger.error(message, *args, **kwargs)
+        self.logger.error(message, *args, **kwargs, stacklevel=2)
 
     def critical(self, message: str, *args, **kwargs):
-        self.logger.critical(message, *args, **kwargs)
+        self.logger.critical(message, *args, **kwargs, stacklevel=2)
 
     def exception(self, message: str, *args, **kwargs):
         kwargs.setdefault('exc_info', True)
-        self.logger.error(message, *args, **kwargs)
+        self.logger.error(message, *args, **kwargs, stacklevel=2)
 
     def log(self, level: str | int, message: str, *args, **kwargs):
         if isinstance(level, str):
             level = LEVEL_MAP.get(level.upper(), logging.INFO)
-        self.logger.log(level, message, *args, **kwargs)
+        self.logger.log(level, message, *args, **kwargs, stacklevel=2)
 
     # ========== Configuration Methods ==========
 
