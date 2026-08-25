@@ -8,10 +8,16 @@ Modules:
 -------
 results.py —— Test Result Manager
   Manages result persistence (batch buffering), historical loading, and querying.
+
 resume.py —— Strategy Controller
   Provides checkpoint resumption logic and rate limit detection strategy.
-timecho.py —— TimechoAI Interaction
+
+timecho.py —— TimechoAI Interaction Layer
     Encapsulates API requests and response handling, offering a unified high-level API.
+
+concurrent.py —— (Internal) Concurrent Utilities
+  Provides thread-safe primitives (FileLock, ProcessSafeCache) used internally.
+  NOT exposed in __all__. Used by results.py for file operation safety.
 
 Usage:
 --------------
@@ -22,7 +28,7 @@ Usage:
 >>> flush_all_results()  # Must call before exit
 
 >>> # Strategy control
->>> from core.resume import is_rate_limited, build_completed_keys
+>>> from core.resume import is_rate_limited, should_skip_test, build_completed_keys
 >>> if is_rate_limited("Error 429"):
 ...     print("Rate limit detected")
 
@@ -31,43 +37,10 @@ Usage:
 >>> forecast(data)
 """
 
-
-from .results import (
-    load_results_from_csv,
-    append_result_to_csv,
-    flush_all_results,
-    get_results,
-    get_results_by_model,
-    get_results_by_scene,
-    get_results_by_passname,
-)
-
-from .resume import (
-    is_rate_limited,
-    should_skip_test,
-    build_completed_keys
-)
-
-from .timecho import (
-    forecast,
-    extract_pred_values
-)
-
 __all__ = [
-    # --- results.py ---
-    "load_results_from_csv",
-    "append_result_to_csv",
-    "flush_all_results",
-    "get_results",
-    "get_results_by_model",
-    "get_results_by_scene",
-    "get_results_by_passname",
-    # --- resume.py ---
-    "is_rate_limited",
-    "should_skip_test",
-    "build_completed_keys",
-    # --- timecho.py ---
-    "forecast",
-    "extract_pred_values"
+    "models",
+    "results",
+    "resume",
+    "timecho",
 ]
 
