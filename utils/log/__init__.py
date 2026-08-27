@@ -12,10 +12,10 @@ Usage:
     logger.info("Hello World")
 """
 
-from utils.log.core import Logger
-from utils.log.decorators import log_execution, log_time
-from utils.log.context import LogLevelContext
-from utils.log.config import (
+from .core import Logger
+from .decorators import log_execution, log_time
+from .context import LogLevelContext
+from .config import (
     get_log_file_path,
     LOG_DIR,
     LOG_FILE_NAME,

@@ -14,8 +14,8 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
 项目遵循标准分层架构，目录结构如下：
 
 - `config/`: 全局配置管理模块
-   - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`等).
    - `constants.py`: 全局常量定义.
+   - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`等).
 - `core/`: 业务核心通用组件层 (封装业务逻辑与状态管理)
    - `concurrent.py`: 并发控制与进程协同模块.
    - `results.py`: 测试结果管理器 (批量缓冲/持久化).

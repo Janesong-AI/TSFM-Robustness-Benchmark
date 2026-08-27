@@ -10,6 +10,7 @@ import os
 import logging
 from pathlib import Path
 from datetime import datetime
+from config.settings import LOG_DIR
 
 # ============================================================
 # Basic Logging Configuration (Supports Environment Variable Overrides)
@@ -83,14 +84,6 @@ IGNORED_LOGGERS: list[str] = [
     "botocore",
     "boto3",
 ]
-
-# ============================================================
-# Path Configuration (Auto-detects Project Root)
-# ============================================================
-
-# Project root directory (auto-detected)
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-LOG_DIR = PROJECT_ROOT / "logs"
 
 
 # ============================================================
@@ -179,7 +172,6 @@ __all__ = [
     'LOG_QUEUE_SIZE',
     'MODULE_LEVEL_OVERRIDES',
     'IGNORED_LOGGERS',
-    'PROJECT_ROOT',
     'LOG_DIR',
     # Mappings
     'LEVEL_MAP',

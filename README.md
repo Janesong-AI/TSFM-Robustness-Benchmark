@@ -13,8 +13,8 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
 The project follows a standard layered architecture:
 
 - `config/`: Global configuration management module
-  - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
   - `constants.py`: Global constants definition.
+  - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
 - `core/`: Business Core Layer (Encapsulates logic and state)
   - `concurrent.py`: Concurrency control and process coordination module.
   - `results.py`: Test result manager (batch buffering/persistence).

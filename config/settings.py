@@ -16,6 +16,7 @@ PROJECT_ROOT: Path = Path(__file__).resolve().parents[1]
 # Derived paths (defined centrally here; other modules use read-only references)
 DATA_DIR:    Path = PROJECT_ROOT / "data"
 OUTPUT_DIR:  Path = PROJECT_ROOT / "outputs"
+LOG_DIR:  Path = PROJECT_ROOT / "logs"
 
 # ============================================================
 # API Configuration
@@ -29,6 +30,6 @@ API_KEY: str = os.getenv(
 )
 
 # Automatically ensure key directories exist (idempotent operation)
-for _dir in (DATA_DIR, OUTPUT_DIR):
+for _dir in (DATA_DIR, LOG_DIR, OUTPUT_DIR):
     _dir.mkdir(parents=True, exist_ok=True)
 
