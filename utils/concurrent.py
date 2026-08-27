@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-core/concurrent.py — Concurrent-Safety Common Module
+utils/concurrent.py — Concurrent-Safety Common Module
 ====================================
 Provides cross-process safe caches, locks, and counters supporting concurrent read/write operations.
 Designed for pytest-xdist multi-process testing environments.

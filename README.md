@@ -16,12 +16,12 @@ The project follows a standard layered architecture:
   - `constants.py`: Global constants definition.
   - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
 - `core/`: Business Core Layer (Encapsulates logic and state)
-  - `concurrent.py`: Concurrency control and process coordination module.
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
 - `features/`: Business feature implementation layer, contains specific business scenario logic
 - `utils/`: Utility Layer (Stateless pure functions)
+  - `concurrent.py`: Concurrency control and process coordination module.
   - `client.py`: Low-level Client Connection.
   - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
   - `files.py`: File Operation Utils.
@@ -86,7 +86,7 @@ python -m pip install timecho-ai pandas pytest pytest-xdist portalocker
 > ** Platform Note:** 
 > If you are running the code on Windows, it is recommended to install `portalocker` with the Windows extension to ensure proper cross-process file locking:
 > ```bash
-> pip install "portalocker[win32]"
+> python -m pip install "portalocker[win32]"
 > ```
 
 ## 5. Quick Start

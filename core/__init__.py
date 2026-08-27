@@ -15,10 +15,6 @@ resume.py —— Strategy Controller
 timecho.py —— TimechoAI Interaction Layer
     Encapsulates API requests and response handling, offering a unified high-level API.
 
-concurrent.py —— (Internal) Concurrent Utilities
-  Provides thread-safe primitives (FileLock, ProcessSafeCache) used internally.
-  NOT exposed in __all__. Used by results.py for file operation safety.
-
 Usage:
 --------------
 >>> # Result management (with auto buffering)

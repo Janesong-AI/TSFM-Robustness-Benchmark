@@ -17,12 +17,12 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    - `constants.py`: 全局常量定义.
    - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`等).
 - `core/`: 业务核心通用组件层 (封装业务逻辑与状态管理)
-   - `concurrent.py`: 并发控制与进程协同模块.
    - `results.py`: 测试结果管理器 (批量缓冲/持久化).
    - `resume.py`: 策略控制器 (限流判断/断点续跑).
    - `timecho.py`: API 交互封装.
 - `features/`: 业务特性实现层, 存放具体业务场景逻辑
 - `utils/`: 基础工具层 (无状态纯函数)
+   - `concurrent.py`: 并发控制与进程协同模块.
    - `client.py`: 底层客户端连接.
    - `data_sanitizer.py`: 数据清洗与类型安全工具.
    - `files.py`: 文件操作工具.
@@ -87,7 +87,7 @@ python -m pip install timecho-ai pandas pytest pytest-xdist portalocker
 > ** 平台提示:** 
 > 如果您的代码在 Windows 上运行，为了确保跨进程文件锁的正常工作，建议安装带有 Windows 扩展的 `portalocker`：
 > ```bash
-> pip install "portalocker[win32]"
+> python -m pip install "portalocker[win32]"
 > ```
 
 ## 5. 快速运行

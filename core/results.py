@@ -16,7 +16,7 @@ Core Features:
   - Supports pytest-xdist multi-process environments
 
 Module Position in Architecture:
-  - Calls: core.concurrent (Concurrent Safety), utils.files (file operations), utils.logger (logging)
+  - Calls: utils.concurrent (Concurrent Safety), utils.files (file operations), utils.logger (logging)
   - Called by: features.* (business logic), resume.py (breakpoint logic)
 
 Author: Janesong
@@ -28,7 +28,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 from core.resume import is_rate_limited
-from core.concurrent import FileLock, ProcessSafeCache
+from utils.concurrent import FileLock, ProcessSafeCache
 from utils.files import append_to_csv, csv_exists_and_not_empty, read_csv_to_list
 from utils.log import get_logger
 
