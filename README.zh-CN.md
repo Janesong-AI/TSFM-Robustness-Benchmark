@@ -66,15 +66,15 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
+> **Windows PowerShell 用户注意**: 若遇到“禁止运行脚本”的报错, 请以管理员身份运行 PowerShell 并执行:   
+> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
 ### 4.3 退出虚拟环境
 
 **退出虚拟环境(通用)** :   
 ```bash
   deactivate
 ```
-
-> **Windows PowerShell 用户注意**: 若遇到“禁止运行脚本”的报错, 请以管理员身份运行 PowerShell 并执行:   
-> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 ### 4.4 安装项目依赖
 

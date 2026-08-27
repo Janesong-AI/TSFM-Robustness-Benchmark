@@ -65,15 +65,15 @@ source .venv/bin/activate
 .venv\Scripts\Activate.ps1
 ```
 
+>  **Windows PowerShell users**: If you see an error about script execution being disabled, open PowerShell as Administrator and run:  
+> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
+
 ### 4.3 Quit Virtual Environment
 
 **Deactivate the virtual environment (universal)** :
 ```bash
   deactivate
 ```
-
->  **Windows PowerShell users**: If you see an error about script execution being disabled, open PowerShell as Administrator and run:  
-> `Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser`
 
 ### 4.4 Install Dependencies
 

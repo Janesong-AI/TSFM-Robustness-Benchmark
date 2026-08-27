@@ -17,7 +17,6 @@ class LogLevelContext:
     Example:
         >>> with LogLevelContext(logger, 'DEBUG'):
         ...     logger.debug("This line will be displayed")
-        >>>
 
         >>> logger.debug("After reverting to the original level, this line will not be displayed")
     """

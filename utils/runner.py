@@ -261,21 +261,21 @@ class TestRunner:
         timeout = timeout if timeout is not None else self.default_timeout
         retries = retries if retries is not None else self.default_retries
         result = TestResult(module_path=module_path)
-        
+
         # First, get the entry function name via AST (zero side effects)
         entry_name = self._find_entry_name_ast(module_path)
         if entry_name is None:
             result.mark_end(TestStatus.SKIPPED, "No entry function found")
             return result
-    
+
         attempt = 0
         max_attempts = retries + 1
-    
+
         while attempt < max_attempts:
             attempt += 1
             result.retries = attempt - 1
             result.mark_start()
-    
+
             try:
                 if timeout > 0:
                     # Timeout mode: main process does not import, delegates directly to subprocess
@@ -285,11 +285,11 @@ class TestRunner:
                     module = importlib.import_module(module_path)
                     func = getattr(module, entry_name)
                     func()
-    
+
                 result.mark_end(TestStatus.PASSED)
                 self.logger.info(f" Pass: {module_path}")
                 return result
-    
+
             except TimeoutError_ as timeExp:
                 result.mark_end(TestStatus.TIMEOUT, str(timeExp))
                 if attempt < max_attempts:
@@ -297,7 +297,7 @@ class TestRunner:
                     continue
                 self.logger.error(f" Timed out and retries exhausted: {module_path}")
                 return result
-    
+
             except Exception as exp:
                 error_detail = traceback.format_exc()
                 if attempt < max_attempts:

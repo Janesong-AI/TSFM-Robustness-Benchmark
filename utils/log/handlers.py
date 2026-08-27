@@ -68,7 +68,7 @@ def create_file_handler(level: int) -> logging.Handler:
             backupCount=LOG_BACKUP_COUNT,
             encoding=LOG_ENCODING,
         )
-    
+
     handler.setLevel(level)
     handler.setFormatter(create_file_formatter())
     return handler
@@ -83,7 +83,7 @@ def create_handlers(level: int, console_output: bool, file_output: bool, use_col
         console_output: Whether to create a console handler.
         file_output: Whether to create a file handler.
         use_color: Whether to use color for console output.
-    
+
     Returns:
         A list of logging.Handler instances.
     """

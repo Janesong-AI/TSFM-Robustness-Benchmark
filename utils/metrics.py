@@ -16,7 +16,6 @@ Create Date: 2026/08/17.
 
 import numpy as np
 
-
 def calc_metrics(
     predictions: np.ndarray | None,
     ground_truth: np.ndarray,

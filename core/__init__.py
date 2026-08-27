@@ -8,6 +8,7 @@ Modules:
 -------
 results.py —— Test Result Manager
   Manages result persistence (batch buffering), historical loading, and querying.
+  Internally uses utils.concurrent for thread-safe file operations.
 
 resume.py —— Strategy Controller
   Provides checkpoint resumption logic and rate limit detection strategy.

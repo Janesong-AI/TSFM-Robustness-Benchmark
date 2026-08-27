@@ -50,7 +50,7 @@ def setup_logging(**kwargs) -> Logger:
 
     Args:
         **kwargs: Optional configuration parameters to override defaults.
-    
+
     Returns:
         Logger instance.
     
@@ -75,7 +75,7 @@ def set_global_level(level: str):
 
     Args:
         level: Log level (TRACE, DEBUG, INFO, WARNING, ERROR, CRITICAL).
-    
+
     Raises:
         ValueError: If an invalid log level is provided.
     """

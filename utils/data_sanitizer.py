@@ -123,14 +123,14 @@ def load_json_with_nan(json_str: str) -> Any:
 def safe_float(value: Any, default: float = 0.0) -> float:
     """
     Safely converts a value to float, handling NaN/None values.
-    
+
     Args:
         value: The value to convert.
         default: The default value to return if conversion fails.
-    
+
     Returns:
         The converted floating-point number.
-    
+
     Example:
         >>> safe_float(np.nan)
         0.0
@@ -152,14 +152,14 @@ def safe_float(value: Any, default: float = 0.0) -> float:
 def safe_int(value: Any, default: int = 0) -> int:
     """
     Safely converts a value to int, handling NaN/None values.
-    
+
     Args:
         value: The value to convert.
         default: The default value to return if conversion fails.
-    
+
     Returns:
         The converted integer.
-    
+
     Example:
         >>> safe_int(42)
         42
