@@ -11,17 +11,9 @@ Design Principles:
   - Batch scheduling is delegated to pytest, but the primitives for discovery / execution / result are defined here
 """
 
-import os
-import sys
-import ast
-import time
-import importlib
-import traceback
+import os, sys, ast, time, importlib, traceback
 import multiprocessing as mp
 from pathlib import Path
-from typing import Any
-from dataclasses import dataclass, field
-from enum import Enum
 from queue import Empty
 
 # Bootstrap (defensive)
@@ -31,110 +23,11 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from config.settings import PROJECT_ROOT
 from utils.log import get_logger
+from core.models import TestStatus, TestResult, BatchReport  # noqa: F401
 
 
 # ============================================================
-# 1. Data Models — shared by runner / pytest / resume
-# ============================================================
-
-class TestStatus(Enum):
-    """Test status enumeration"""
-    PENDING   = "PENDING"
-    RUNNING   = "RUNNING"
-    PASSED    = "PASSED"
-    FAILED    = "FAILED"
-    SKIPPED   = "SKIPPED"
-    ERROR     = "ERROR"
-    TIMEOUT   = "TIMEOUT"
-
-    @property
-    def is_success(self) -> bool:
-        return self == TestStatus.PASSED
-
-    @property
-    def is_failure(self) -> bool:
-        return self in (TestStatus.FAILED, TestStatus.ERROR, TestStatus.TIMEOUT)
-
-
-@dataclass
-class TestResult:
-    """
-    Execution result of a single test case (in-memory).
-    Used by run.py for printing, conftest.py for assertions, and core/results.py for persistence.
-    """
-    module_path: str
-    status: TestStatus = TestStatus.PENDING
-    duration: float = 0.0
-    error: str | None = None
-    start_time: float | None = None
-    end_time: float | None = None
-    retries: int = 0
-
-    def mark_start(self):
-        self.start_time = time.time()
-        self.status = TestStatus.RUNNING
-
-    def mark_end(self, status: TestStatus, error: str | None = None):
-        self.end_time = time.time()
-        self.duration = self.end_time - (self.start_time or self.end_time)
-        self.status = status
-        self.error = error
-
-    def to_dict(self) -> dict[str, Any]:
-        """Dictionary provided for core/results.py to persist to disk."""
-        return {
-            "module_path": self.module_path,
-            "status": self.status.value,
-            "duration": round(self.duration, 3),
-            "error": self.error,
-            "start_time": self.start_time,
-            "end_time": self.end_time,
-            "retries": self.retries,
-        }
-
-    def __str__(self):
-        icon = {
-            TestStatus.PASSED:  "✓",
-            TestStatus.FAILED:   "✗",
-            TestStatus.SKIPPED:  "○",
-            TestStatus.ERROR:    "⚠",
-            TestStatus.TIMEOUT:  "⏱",
-        }.get(self.status, "?")
-        retry_str = f" (retries={self.retries})" if self.retries else ""
-        return f"{icon} {self.module_path} ({self.duration:.2f}s){retry_str}"
-
-
-@dataclass
-class BatchReport:
-    """Batch execution summary report (in-memory), printed by run.py or conftest.py."""
-    results: list[TestResult] = field(default_factory=list)
-    total_duration: float = 0.0
-
-    def add(self, result: TestResult):
-        self.results.append(result)
-        self.total_duration += result.duration
-
-    @property
-    def total(self):      return len(self.results)
-    @property
-    def passed(self):      return sum(1 for r in self.results if r.status.is_success)
-    @property
-    def failed(self):      return sum(1 for r in self.results if r.status.is_failure)
-    @property
-    def skipped(self):     return sum(1 for r in self.results if r.status == TestStatus.SKIPPED)
-
-    def summary(self) -> str:
-        return (
-            f"  Total: {self.total}  |  "
-            f"Passed: {self.passed}  |  "
-            f"Failed: {self.failed}  |  "
-            f"Skipped: {self.skipped}  |  "
-            f"Duration: {self.total_duration:.2f}s"
-        )
-
-
-# ============================================================
-# 2. Test Discoverer — AST static analysis, zero side effects
+# 1. Test Discoverer — AST static analysis, zero side effects
 # ============================================================
 
 class TestDiscoverer:
@@ -149,7 +42,7 @@ class TestDiscoverer:
     """
 
     ENTRY_POINTS = ("main", "run", "start")
-    TEST_PATTERNS = ("_test.py", "_test_v1.py", "_test_v2.py", "_test_v3.py")
+    TEST_PATTERNS = ("test_*.py")
 
     def __init__(self, logger=None):
         self.logger = logger or get_logger("discoverer")
@@ -199,7 +92,7 @@ class TestDiscoverer:
 
     def _is_test_file(self, py_file: Path) -> bool:
         name = py_file.name
-        return any(name.endswith(p) for p in self.TEST_PATTERNS)
+        return any(name.endswith(p.replace("*", "")) for p in self.TEST_PATTERNS)
 
     def _file_to_module_path(self, py_file: Path) -> str | None:
         try:
@@ -228,15 +121,15 @@ class TestDiscoverer:
             }
             return any(ep in top_funcs for ep in self.ENTRY_POINTS)
         except SyntaxError as synExp:
-            self.logger.warning(f"Syntax error in {py_file}: {synExp}")
+            self.logger.error(f"Syntax error in {py_file}: {synExp}")
             return False
         except Exception as exp:
-            self.logger.warning(f"AST analysis failed for {py_file}: {exp}")
+            self.logger.error(f"AST analysis failed for {py_file}: {exp}")
             return False
 
 
 # ============================================================
-# 3. Test Runner — single-case execution with timeout + retry
+# 2. Test Runner — single-case execution with timeout + retry
 # ============================================================
 
 class TimeoutError_(Exception):
@@ -266,6 +159,7 @@ class TestRunner:
         entry_name = self._find_entry_name_ast(module_path)
         if entry_name is None:
             result.mark_end(TestStatus.SKIPPED, "No entry function found")
+            self.logger.info(str(result))
             return result
 
         attempt = 0
@@ -279,7 +173,10 @@ class TestRunner:
             try:
                 if timeout > 0:
                     # Timeout mode: main process does not import, delegates directly to subprocess
-                    self._run_with_timeout(module_path, entry_name, timeout)
+                    actual_duration = self._run_with_timeout(module_path, entry_name, timeout)
+                    result.end_time = time.time()
+                    result.duration = actual_duration
+                    result.status = TestStatus.PASSED
                 else:
                     # Normal mode: main process imports and executes
                     module = importlib.import_module(module_path)
@@ -287,25 +184,26 @@ class TestRunner:
                     func()
 
                 result.mark_end(TestStatus.PASSED)
-                self.logger.info(f" Pass: {module_path}")
+                self.logger.info(str(result))
                 return result
 
             except TimeoutError_ as timeExp:
                 result.mark_end(TestStatus.TIMEOUT, str(timeExp))
                 if attempt < max_attempts:
-                    self.logger.warning(f" Timeout, will retry ({attempt}/{max_attempts})")
+                    self.logger.error(str(result))
                     continue
-                self.logger.error(f" Timed out and retries exhausted: {module_path}")
+                self.logger.error(str(result))
                 return result
 
             except Exception as exp:
                 error_detail = traceback.format_exc()
                 if attempt < max_attempts:
-                    self.logger.warning(f" Attempt {attempt} failed, will retry")
+                    self.logger.error(str(result))
                     self.logger.debug(error_detail)
                     continue
-                self.logger.error(f" Fail: {module_path}\n{error_detail}")
                 result.mark_end(TestStatus.FAILED, str(exp))
+                self.logger.error(str(result))
+                self.logger.debug(error_detail)
                 return result
         return result
 
@@ -365,20 +263,22 @@ class TestRunner:
                 f"Subprocess crashed (exitcode={process.exitcode})"
             )
 
-        # Check if the subprocess exited due to an exception
         try:
-            error_pkg = result_queue.get_nowait()
-            if error_pkg is not None:
-                raise RuntimeError(
-                    f"{error_pkg['type']}: {error_pkg['message']}\n"
-                    f"{error_pkg['traceback']}"
-                )
+            result = result_queue.get_nowait()
+            if isinstance(result, dict):
+                if result.get("status") == "success" and "duration" in result:
+                    return result["duration"]
+                elif "type" in result:
+                    raise RuntimeError(
+                        f"{result['type']}: {result['message']}\n"
+                        f"{result['traceback']}"
+                    )
         except Empty:
-            # Queue is empty and process exited normally
             pass
         finally:
             result_queue.close()
             result_queue.join_thread()
+        return None
 
     @staticmethod
     def _wrap_func(module_path: str, entry_name: str, queue):
@@ -386,10 +286,13 @@ class TestRunner:
             if str(_PROJECT_ROOT) not in sys.path:
                 sys.path.insert(0, str(_PROJECT_ROOT))
 
+            start_time = time.time()
             module = importlib.import_module(module_path)
             func = getattr(module, entry_name)
             func()
-            queue.put(None)  # Normal completion marker
+            duration = time.time() - start_time
+
+            queue.put({"duration": duration, "status": "success"})
         except Exception as exp:
             queue.put({
                 "type": type(exp).__name__,
@@ -399,16 +302,16 @@ class TestRunner:
 
 
 # ============================================================
-# 4. Path Resolution Utility
+# 3. Path Resolution Utility
 # ============================================================
 
 def parse_module_path(raw_path: str) -> str:
     """
     Resolve a user-provided path into a standard module path.
     Supports:
-      - features.futureCovs.dirtyData.dirty_test
-      - ./features/futureCovs/dirtyData/dirty_test.py
-      - features/futureCovs/dirtyData/dirty_test.py
+      - features.futureCovs.dirtyData.test_dirty
+      - ./features/futureCovs/dirtyData/test_dirty.py
+      - features/futureCovs/dirtyData/test_dirty.py
     """
     if raw_path.startswith("./") or raw_path.endswith(".py") or "/" in raw_path:
         file_path = Path(raw_path).resolve()

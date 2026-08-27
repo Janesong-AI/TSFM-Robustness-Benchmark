@@ -6,6 +6,10 @@ Serves as the bridge between the ``features`` layer and ``utils`` layer.
 
 Modules:
 -------
+models.py —— Shared Data Models
+  Defines core data structures (TestStatus, TestResult, BatchReport) used across
+  the entire framework. Supports i18n via TEST_LANG environment variable.
+
 results.py —— Test Result Manager
   Manages result persistence (batch buffering), historical loading, and querying.
   Internally uses utils.concurrent for thread-safe file operations.
@@ -18,6 +22,13 @@ timecho.py —— TimechoAI Interaction Layer
 
 Usage:
 --------------
+>>> # Data models
+>>> from core.models import TestStatus, TestResult, BatchReport
+>>> result = TestResult(module_path="test_xxx.py")
+>>> result.mark_start()
+>>> result.mark_end(TestStatus.PASSED)
+>>> print(result.status.get_display("PASSED"))  # i18n display
+
 >>> # Result management (with auto buffering)
 >>> from core.results import load_results_from_csv, append_result_to_csv, flush_all_results
 >>> records, fails = load_results_from_csv("./results/test.csv")

@@ -17,6 +17,7 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    - `constants.py`: 全局常量定义.
    - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`等).
 - `core/`: 业务核心通用组件层 (封装业务逻辑与状态管理)
+   - `models.py`: 共享数据模型 (TestStatus、TestResult、BatchReport).
    - `results.py`: 测试结果管理器 (批量缓冲/持久化).
    - `resume.py`: 策略控制器 (限流判断/断点续跑).
    - `timecho.py`: API 交互封装.

@@ -16,6 +16,7 @@ The project follows a standard layered architecture:
   - `constants.py`: Global constants definition.
   - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
 - `core/`: Business Core Layer (Encapsulates logic and state)
+  - `models.py`: Shared data models (TestStatus, TestResult, BatchReport).
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
