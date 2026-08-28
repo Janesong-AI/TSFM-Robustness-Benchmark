@@ -9,7 +9,6 @@ Responsible for creating and configuring various log handlers.
 import sys
 import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-
 from utils.log.config import (
     LOG_DIR,
     LOG_FILE_NAME,
@@ -28,13 +27,26 @@ def create_console_handler(level: int, use_color: bool = None) -> logging.Handle
     Creates a console log handler.
 
     Args:
-        level: Log level.
-        use_color: Whether to use color.
-    
+        level: Log level
+        use_color: Whether to use color
+
     Returns:
-        An instance of logging.Handler.
+        An instance of logging.Handler
     """
-    handler = logging.StreamHandler(sys.stdout)
+    stream = sys.stdout
+
+    try:
+        cur_encoding = (getattr(stream, "encoding", "") or "").lower()
+        if cur_encoding not in ("utf-8", "utf8"):
+            stream.reconfigure(
+                encoding=LOG_ENCODING,
+                errors="replace",
+                line_buffering=True,
+            )
+    except (AttributeError, OSError, ValueError):
+        pass
+
+    handler = logging.StreamHandler(stream)
     handler.setLevel(level)
     handler.setFormatter(create_console_formatter(use_color))
     return handler

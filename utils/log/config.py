@@ -6,11 +6,23 @@ utils/log/config.py -- Logging Configuration Definitions
 Supports overriding configurations via environment variables.
 """
 
-import os
+import os, sys
 import logging
 from pathlib import Path
 from datetime import datetime
 from config.settings import LOG_DIR
+
+def _running_under_pytest() -> bool:
+    return "pytest" in sys.modules
+
+def _xdist_worker() -> bool:
+    return os.environ.get("PYTEST_XDIST_WORKER") is not None
+
+_raw_console = os.getenv("LOG_CONSOLE_OUTPUT", "").lower()
+if _raw_console in ("true", "false", "1", "0", "yes", "no"):
+    LOG_CONSOLE_OUTPUT: bool = _raw_console in ("true", "1", "yes")
+else:
+    LOG_CONSOLE_OUTPUT: bool = not (_running_under_pytest() or _xdist_worker())
 
 # ============================================================
 # Basic Logging Configuration (Supports Environment Variable Overrides)
@@ -24,9 +36,6 @@ LOG_FILE_BASENAME: str = os.getenv("LOG_FILE_BASENAME", "tsfm_benchmark")
 
 # Whether to include date in the filename
 LOG_FILE_WITH_DATE: bool = os.getenv("LOG_FILE_WITH_DATE", "true").lower() == "true"
-
-# Whether to output to console
-LOG_CONSOLE_OUTPUT: bool = os.getenv("LOG_CONSOLE_OUTPUT", "true").lower() == "true"
 
 # Whether to output to file
 LOG_FILE_OUTPUT: bool = os.getenv("LOG_FILE_OUTPUT", "true").lower() == "true"
