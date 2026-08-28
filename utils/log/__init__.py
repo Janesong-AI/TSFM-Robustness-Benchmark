@@ -17,10 +17,10 @@ from .decorators import log_execution, log_time
 from .context import LogLevelContext
 from .config import (
     get_log_file_path,
+    get_log_level,
     LOGS_DIR,
     LOG_FILE_NAME,
     LOG_LEVEL,
-    get_log_level,
 )
 
 # Convenience Functions
@@ -43,6 +43,13 @@ def get_logger(name: str = 'root', **kwargs) -> Logger:
     """
     return Logger.get_logger(name, **kwargs)
 
+def get_default_logger() -> Logger:
+    """Retrieves the default logger instance."""
+    global _default_logger
+    if _default_logger is None:
+        _default_logger = get_logger('default')
+    return _default_logger
+
 
 def setup_logging(**kwargs) -> Logger:
     """
@@ -59,15 +66,6 @@ def setup_logging(**kwargs) -> Logger:
         >>> logger = setup_logging(level='INFO')
     """
     return get_logger('root', **kwargs)
-
-
-def get_default_logger() -> Logger:
-    """Retrieves the default logger instance."""
-    global _default_logger
-    if _default_logger is None:
-        _default_logger = get_logger('default')
-    return _default_logger
-
 
 def set_global_level(level: str):
     """
@@ -109,8 +107,8 @@ __all__ = [
     'LogLevelContext',
     # Configuration Related
     'get_log_file_path',
+    'get_log_level',
     'LOGS_DIR',
     'LOG_FILE_NAME',
     'LOG_LEVEL',
-    'get_log_level',
 ]
