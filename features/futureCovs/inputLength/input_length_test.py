@@ -18,7 +18,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from config.settings import OUTPUT_DIR
+from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.metrics import calc_metrics
@@ -27,7 +27,7 @@ from utils.files import save_to_csv
 # ============================================================
 # 0. Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "inputLength"
+OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "inputLength"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "input_length_result.csv"    # Prediction results file
 

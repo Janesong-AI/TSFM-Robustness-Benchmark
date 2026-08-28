@@ -17,7 +17,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from config.settings import DATA_DIR, OUTPUT_DIR
+from config.settings import DATA_DIR, RESULTS_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.metrics import calc_metrics
@@ -31,7 +31,7 @@ from utils.data_sanitizer import clean_nan_values
 # ============================================================
 DATA_SUBDIR = DATA_DIR / "features" / "futureCovs" / "dirtyData"    # Test data file path
 DATA_CSV_PATH = DATA_SUBDIR / "dirty_clean.csv"
-OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "dirtyData"
+OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "dirtyData"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "dirty_test_result.csv"    # Prediction results file
 

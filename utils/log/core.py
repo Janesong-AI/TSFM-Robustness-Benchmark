@@ -32,7 +32,7 @@ class Logger:
     Logger Management Class - Singleton Pattern
 
     Features:
-        - Unified Logging: Consolidates all logs into a single log file (e.g., logs/tsfm_benchmark.log).
+        - Unified Logging: Consolidates all logs into a single log file (e.g., outputs/logs/tsfm_benchmark.log).
         - Thread-Safe: Ensures concurrency safety (uses locking).
         - Async Support: Supports asynchronous logging via QueueHandler and QueueListener.
         - Module Overrides: Supports module-level log level overrides.
@@ -123,10 +123,7 @@ class Logger:
         with cls._lock:
             if cls._initialized_global:
                 return
-            
-            # Ensure log directory exists
-            LOG_DIR.mkdir(parents=True, exist_ok=True)
-            
+
             # Create log queue (for asynchronous logging)
             if LOG_QUEUE_SIZE > 0:
                 cls._log_queue = queue.Queue(maxsize=LOG_QUEUE_SIZE)

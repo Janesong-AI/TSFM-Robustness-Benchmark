@@ -10,7 +10,7 @@ import os, sys
 import logging
 from pathlib import Path
 from datetime import datetime
-from config.settings import LOG_DIR
+from config.settings import LOGS_DIR
 
 def _running_under_pytest() -> bool:
     return "pytest" in sys.modules
@@ -157,7 +157,7 @@ def is_async_enabled() -> bool:
 
 def get_log_file_path() -> Path:
     """Gets the full path to the log file."""
-    return LOG_DIR / LOG_FILE_NAME
+    return LOGS_DIR / LOG_FILE_NAME
 
 
 __all__ = [
@@ -181,7 +181,7 @@ __all__ = [
     'LOG_QUEUE_SIZE',
     'MODULE_LEVEL_OVERRIDES',
     'IGNORED_LOGGERS',
-    'LOG_DIR',
+    'LOGS_DIR',
     # Mappings
     'LEVEL_MAP',
     'VALID_LEVELS',

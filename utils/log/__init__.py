@@ -17,7 +17,7 @@ from .decorators import log_execution, log_time
 from .context import LogLevelContext
 from .config import (
     get_log_file_path,
-    LOG_DIR,
+    LOGS_DIR,
     LOG_FILE_NAME,
     LOG_LEVEL,
     get_log_level,
@@ -109,7 +109,7 @@ __all__ = [
     'LogLevelContext',
     # Configuration Related
     'get_log_file_path',
-    'LOG_DIR',
+    'LOGS_DIR',
     'LOG_FILE_NAME',
     'LOG_LEVEL',
     'get_log_level',

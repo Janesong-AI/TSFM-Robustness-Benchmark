@@ -64,7 +64,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from config.settings import OUTPUT_DIR
+from config.settings import RESULTS_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_512
 from core.results import load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
@@ -74,7 +74,7 @@ from utils.metrics import calc_metrics
 # ============================================================
 # 1. Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "conceptDrift"
+OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "conceptDrift"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2_error.csv" 
 
@@ -449,7 +449,7 @@ else:
                     time.sleep(1)
 
     if not stop_by_rate_limit:
-        print(f"\n  ✅ 本次运行全部完成！新增: {runned}\n")
+        print(f"\n  本次运行全部完成! 新增: {runned}\n")
 
 
 # ============================================================

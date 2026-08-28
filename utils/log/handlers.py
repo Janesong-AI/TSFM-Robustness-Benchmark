@@ -10,7 +10,7 @@ import sys
 import logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from utils.log.config import (
-    LOG_DIR,
+    LOGS_DIR,
     LOG_FILE_NAME,
     LOG_MAX_BYTES,
     LOG_BACKUP_COUNT,
@@ -62,7 +62,7 @@ def create_file_handler(level: int) -> logging.Handler:
     Returns:
         An instance of logging.Handler.
     """
-    log_file_path = LOG_DIR / LOG_FILE_NAME
+    log_file_path = LOGS_DIR / LOG_FILE_NAME
 
     if LOG_ROTATION == "time":
         handler = TimedRotatingFileHandler(

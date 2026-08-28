@@ -36,7 +36,7 @@ import numpy as np
 import pandas as pd
 from typing import Any
 
-from config.settings import OUTPUT_DIR
+from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
 from core.timecho import forecast
 from utils.metrics import calc_metrics
@@ -45,7 +45,7 @@ from utils.files import save_to_csv
 # ============================================================
 # 0. Configuration Constants
 # ============================================================
-OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "irregularSampling"
+OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "irregularSampling"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "irregular_sampling_result.csv"    # Prediction results file
 
@@ -115,7 +115,7 @@ def _make_timestamps(
         ideal_dates: Ideal equispaced timestamps
         total_len: Total number of timestamps
         seed: Random seed for perturbation
-    
+
     Returns:
         DatetimeIndex with irregular timestamps according to mode
     """
@@ -181,7 +181,7 @@ def _make_test_result(
 ) -> dict[str, Any]:
     """
     Create a standardized test result dictionary.
-    
+
     Args:
         scenario: Test scenario name
         model_id: Model identifier
@@ -190,7 +190,7 @@ def _make_test_result(
         elapsed_ms: Execution time in milliseconds
         success: Whether prediction succeeded
         error: Error message (None if succeeded)
-    
+
     Returns:
         Standardized result dictionary
     """
@@ -273,7 +273,7 @@ def _analyze_timestamp_usage(results: list[dict]) -> dict[str, Any]:
             "timestamps_utilized": timestamps_utilized,
             "conclusion": "Timestamp semantics utilized" if timestamps_utilized else "SDK might ignore timestamps"
         }
-    
+
     # Overall conclusion
     all_utilized = all(
         analysis["model_analysis"].get(m, {}).get("timestamps_utilized", False)
@@ -319,7 +319,7 @@ def run_irregular_sampling_test(
         print("Scenario A: Variable Sampling Rate & Irregular Timestamp Test")
         print(f"   {len(models)} Models x {len(scenarios)} Scenarios = {len(models) * len(scenarios)} Calls")
         print("=" * 80)
-    
+
     # Step 1: Generate base signal (identical for all scenarios)
     target_values, ideal_dates, ground_truth = _generate_base_signal(seed=42)
 

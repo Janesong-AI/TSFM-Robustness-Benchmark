@@ -35,7 +35,7 @@ Create Date: 2026/07/05, Updated on 2026/08/13.
 import numpy as np
 import pandas as pd
 
-from config.settings import OUTPUT_DIR
+from config.settings import RESULTS_DIR
 from config import constants as CONSTANTS
 from core.timecho import forecast
 from utils.metrics import evaluate_prediction
@@ -44,7 +44,7 @@ from utils.files import save_to_csv
 # ============================================================
 # 0.Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = OUTPUT_DIR / "features" / "futureCovs" / "freqMismatch"
+OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "freqMismatch"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "frequency_mismatch_result.csv"    # Prediction results file
 
