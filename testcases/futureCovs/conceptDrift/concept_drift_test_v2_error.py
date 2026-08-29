@@ -312,7 +312,7 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
         return {
             "scenario_id": scenario["scenario_id"], "category": scenario["category"], "label": scenario["label"],
             "model_id": model_id, "input_length": in_len, "auto_adapt": auto_adapt, "success": True, "error": None,
-            "mae": m["mae"], "rmse": m["rmse"], "mape": m["MAPE"], "latency_ms": elapsed_ms, "ablation": False
+            "mae": m["MAE"], "rmse": m["RMSE"], "mape": m["MAPE"], "latency_ms": elapsed_ms, "ablation": False
         }
     except Exception as exp:
         return {
@@ -323,270 +323,275 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
 
 
 # ============================================================
-# 4. 主流程
+# 4. 主流程 (入口函数: 由 run.py / TestRunner 调用)
 # ============================================================
-scenarios = build_scenarios()
-completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
-
-completed_keys = set()  # 构建 completed_keys: 成功 + 永久失败(非限流错误)
-for record in completed_records:
-    aa_val = str(record.get("auto_adapt", True)).strip() == "True"
-    key = (str(record["scenario_id"]), str(record["model_id"]), int(record["input_length"]), aa_val)
-    if record.get("success") == True:
-        completed_keys.add(key)
-    elif not is_rate_limited(str(record.get("error", ""))):
-        # 永久失败(如422), 加入 completed 跳过
-        completed_keys.add(key)
-
-# 实际需完成 = 原始234 - NO_COV跳过12 - 消融去重18 - 历史永久失败(422)
-total_needed = TOTAL_RAW - NO_COV_SKIP_COUNT - DEDUP_SKIP_COUNT - perm_fail_count
-
-# 统计已成功(去重)
-all_results = list(completed_records)
-success_so_far = 0
-seen_success = set()
-for r in completed_records:
-    if r.get("success") == True:
-        aa_val = str(r.get("auto_adapt", True)).strip() == "True"
-        k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
-        if k not in seen_success:
-            seen_success.add(k)
-            success_so_far += 1
-
-
-print("=" * 90)
-print("概念漂移与工况切换测试(429重试 / 422跳过 / NO_COV跳过 / 消融去重)")
-print("=" * 90)
-print(f"  原始任务总数: {TOTAL_RAW}")
-print(f"  场景数: {len(scenarios)} (X=5, Y=4, Z=2)")
-print(f"  模型数: {len(MODEL_LIST)} (支持协变量: {len(MODEL_LIST) - len(NO_COV_MODELS)})")
-print(f"  输入长度: {INPUT_LENGTHS}")
-print(f"  跳过: NO_COV={NO_COV_SKIP_COUNT}, 消融去重={DEDUP_SKIP_COUNT}, 422={perm_fail_count}")
-print(f"  实际需完成: {total_needed}")
-print(f"  已成功(去重): {success_so_far}")
-print(f"  剩余: {total_needed - success_so_far}")
-print("=" * 90)
-
-if success_so_far >= total_needed:
-    print("\n✅ 所有测试已完成, 直接输出分析结果.\n")
-else:
-    runned = 0
+def main():
+    # 断点续跑 / 分析 / 汇总共用的状态标志(提前初始化, 修复原脚本
+    # "全部已完成"分支下 stop_by_rate_limit 未定义的 NameError)
     stop_by_rate_limit = False
 
-    print("\n[主测试] 场景 x 模型 x 输入长度")
-    print("-" * 90)
-    for scenario in scenarios:
-        if stop_by_rate_limit: break
-        for in_len in INPUT_LENGTHS:
-            if stop_by_rate_limit: break
-            for model_id in MODEL_LIST:
-                # Z类场景跳过不支持协变量的模型
-                if scenario["category"] == "Z" and model_id in NO_COV_MODELS:
-                    continue
-                key = (scenario["scenario_id"], model_id, in_len, True)
-                if key in completed_keys:
-                    continue
+    scenarios = build_scenarios()
+    completed_records, perm_fail_count = load_results_from_csv(str(RESULT_CSV_PATH))
 
-                r = run_forecast(scenario, model_id, in_len, auto_adapt=True)
-                append_result_to_csv(str(RESULT_CSV_PATH), r)
-                all_results.append(r)
-                runned += 1
+    completed_keys = set()  # 构建 completed_keys: 成功 + 永久失败(非限流错误)
+    for record in completed_records:
+        aa_val = str(record.get("auto_adapt", True)).strip() == "True"
+        key = (str(record["scenario_id"]), str(record["model_id"]), int(record["input_length"]), aa_val)
+        if record.get("success") == True:
+            completed_keys.add(key)
+        elif not is_rate_limited(str(record.get("error", ""))):
+            # 永久失败(如422), 加入 completed 跳过
+            completed_keys.add(key)
 
-                if r["success"]:
-                    print(f"  [{r['scenario_id']}] {model_id:>14s} in={in_len:>3d} | "
-                          f"MAE={r['mae']:.4f}  RMSE={r['rmse']:.4f}  耗时={r['latency_ms']:.0f}ms")
-                else:
-                    print(f"  [{r['scenario_id']}] {model_id:>14s} in={in_len:>3d} | 失败: {r['error'][:60]}")
-                    if is_rate_limited(str(r.get("error", ""))):
-                        # 429: 不加入completed, 不扣total, 停止本次运行
-                        stop_by_rate_limit = True
-                        print(f"     ↳ 限流失败(429), 停止本次运行.")
-                        print(f"\n  ⚠️ 因限流停止.本次新增: {runned}.请获取API配额后再次运行.\n")
-                        break
-                    else:
-                        # 422等永久失败: 加入completed, 扣total, 继续运行
-                        completed_keys.add(key)
-                        perm_fail_count += 1  # 累计永久失败数
-                        total_needed -= 1
-                        print(f"     ↳ 永久失败, 已跳过, 不再重试.")
-                time.sleep(1)
+    # 实际需完成 = 原始234 - NO_COV跳过12 - 消融去重18 - 历史永久失败(422)
+    total_needed = TOTAL_RAW - NO_COV_SKIP_COUNT - DEDUP_SKIP_COUNT - perm_fail_count
 
-    if not stop_by_rate_limit:
-        print("\n[auto_adapt ablation] 场景=Y4")
+    # 统计已成功(去重)
+    all_results = list(completed_records)
+    success_so_far = 0
+    seen_success = set()
+    for r in completed_records:
+        if r.get("success") == True:
+            aa_val = str(r.get("auto_adapt", True)).strip() == "True"
+            k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
+            if k not in seen_success:
+                seen_success.add(k)
+                success_so_far += 1
+
+    print("=" * 90)
+    print("概念漂移与工况切换测试(429重试 / 422跳过 / NO_COV跳过 / 消融去重)")
+    print("=" * 90)
+    print(f"  原始任务总数: {TOTAL_RAW}")
+    print(f"  场景数: {len(scenarios)} (X=5, Y=4, Z=2)")
+    print(f"  模型数: {len(MODEL_LIST)} (支持协变量: {len(MODEL_LIST) - len(NO_COV_MODELS)})")
+    print(f"  输入长度: {INPUT_LENGTHS}")
+    print(f"  跳过: NO_COV={NO_COV_SKIP_COUNT}, 消融去重={DEDUP_SKIP_COUNT}, 422={perm_fail_count}")
+    print(f"  实际需完成: {total_needed}")
+    print(f"  已成功(去重): {success_so_far}")
+    print(f"  剩余: {total_needed - success_so_far}")
+    print("=" * 90)
+
+    if success_so_far >= total_needed:
+        print("\n 所有测试已完成, 直接输出分析结果.\n")
+    else:
+        runned = 0
+
+        print("\n[主测试] 场景 x 模型 x 输入长度")
         print("-" * 90)
-        ablation_scenario = next(s for s in scenarios if s["scenario_id"] == AUTO_ADAPT_ABLATION_SCENARIO)
-        for in_len in INPUT_LENGTHS:
+        for scenario in scenarios:
             if stop_by_rate_limit: break
-            for model_id in MODEL_LIST:
+            for in_len in INPUT_LENGTHS:
                 if stop_by_rate_limit: break
-                for aa in AUTO_ADAPT_VALUES:
-                    key = (AUTO_ADAPT_ABLATION_SCENARIO, model_id, in_len, aa)
+                for model_id in MODEL_LIST:
+                    # Z类场景跳过不支持协变量的模型
+                    if scenario["category"] == "Z" and model_id in NO_COV_MODELS:
+                        continue
+                    key = (scenario["scenario_id"], model_id, in_len, True)
                     if key in completed_keys:
                         continue
 
-                    r = run_forecast(ablation_scenario, model_id, in_len, auto_adapt=aa)
-                    r["ablation"] = True
+                    r = run_forecast(scenario, model_id, in_len, auto_adapt=True)
                     append_result_to_csv(str(RESULT_CSV_PATH), r)
                     all_results.append(r)
                     runned += 1
 
-                    aa_label = "adapt_on " if aa else "adapt_off"
                     if r["success"]:
-                        print(f"  [Y4] {model_id:>14s} in={in_len:>3d} {aa_label} | MAE={r['mae']:.4f}")
+                        print(f"  [{r['scenario_id']}] {model_id:>14s} in={in_len:>3d} | "
+                              f"MAE={r['mae']:.4f}  RMSE={r['rmse']:.4f}  耗时={r['latency_ms']:.0f}ms")
                     else:
-                        print(f"  [Y4] {model_id:>14s} in={in_len:>3d} {aa_label} | 失败: {r['error'][:60]}")
+                        print(f"  [{r['scenario_id']}] {model_id:>14s} in={in_len:>3d} | 失败: {r['error'][:60]}")
                         if is_rate_limited(str(r.get("error", ""))):
+                            # 429: 不加入completed, 不扣total, 停止本次运行
                             stop_by_rate_limit = True
                             print(f"     ↳ 限流失败(429), 停止本次运行.")
-                            print(f"\n  ⚠️  因限流停止.本次新增: {runned}.请获取API配额后再次运行.\n")
+                            print(f"\n   因限流停止.本次新增: {runned}.请获取API配额后再次运行.\n")
                             break
                         else:
-                            # 永久失败(如422), 加入 completed 避免下次重试
+                            # 422等永久失败: 加入completed, 扣total, 继续运行
                             completed_keys.add(key)
                             perm_fail_count += 1  # 累计永久失败数
                             total_needed -= 1
                             print(f"     ↳ 永久失败, 已跳过, 不再重试.")
                     time.sleep(1)
 
-    if not stop_by_rate_limit:
-        print(f"\n  本次运行全部完成! 新增: {runned}\n")
+        if not stop_by_rate_limit:
+            print("\n[auto_adapt ablation] 场景=Y4")
+            print("-" * 90)
+            ablation_scenario = next(s for s in scenarios if s["scenario_id"] == AUTO_ADAPT_ABLATION_SCENARIO)
+            for in_len in INPUT_LENGTHS:
+                if stop_by_rate_limit: break
+                for model_id in MODEL_LIST:
+                    if stop_by_rate_limit: break
+                    for aa in AUTO_ADAPT_VALUES:
+                        key = (AUTO_ADAPT_ABLATION_SCENARIO, model_id, in_len, aa)
+                        if key in completed_keys:
+                            continue
 
+                        r = run_forecast(ablation_scenario, model_id, in_len, auto_adapt=aa)
+                        r["ablation"] = True
+                        append_result_to_csv(str(RESULT_CSV_PATH), r)
+                        all_results.append(r)
+                        runned += 1
 
-# ============================================================
-# 5. 核心分析
-# ============================================================
-print("=" * 90)
-print("核心分析")
-print("=" * 90)
+                        aa_label = "adapt_on " if aa else "adapt_off"
+                        if r["success"]:
+                            print(f"  [Y4] {model_id:>14s} in={in_len:>3d} {aa_label} | MAE={r['mae']:.4f}")
+                        else:
+                            print(f"  [Y4] {model_id:>14s} in={in_len:>3d} {aa_label} | 失败: {r['error'][:60]}")
+                            if is_rate_limited(str(r.get("error", ""))):
+                                stop_by_rate_limit = True
+                                print(f"     ↳ 限流失败(429), 停止本次运行.")
+                                print(f"\n   因限流停止.本次新增: {runned}.请获取API配额后再次运行.\n")
+                                break
+                            else:
+                                # 永久失败(如422), 加入 completed 避免下次重试
+                                completed_keys.add(key)
+                                perm_fail_count += 1  # 累计永久失败数
+                                total_needed -= 1
+                                print(f"     ↳ 永久失败, 已跳过, 不再重试.")
+                        time.sleep(1)
 
-# 去重: Y4/True 在主测试和消融各存了一份
-seen_keys = set()
-deduped_results = []
-for r in all_results:
-    if r.get("success") and r.get("mae") is not None:
-        aa_val = str(r.get("auto_adapt", True)).strip() == "True"
-        k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
-        if k not in seen_keys:
-            seen_keys.add(k)
-            deduped_results.append(r)
-success_results = deduped_results
+        if not stop_by_rate_limit:
+            print(f"\n  本次运行全部完成! 新增: {runned}\n")
 
-print(f"  去重后成功记录: {len(success_results)} 条\n")
+    # ============================================================
+    # 5. 核心分析
+    # ============================================================
+    print("=" * 90)
+    print("核心分析")
+    print("=" * 90)
 
-def get_mae(sid, mid, ilen, aa=True):
-    for r in success_results:
-        aa_val = str(r.get("auto_adapt", True)).strip() == "True"
-        if (str(r["scenario_id"]) == sid and str(r["model_id"]) == mid and 
-            int(r["input_length"]) == ilen and aa_val == aa):
-            return r["mae"]
-    return None
+    # 去重: Y4/True 在主测试和消融各存了一份
+    seen_keys = set()
+    deduped_results = []
+    for r in all_results:
+        if r.get("success") and r.get("mae") is not None:
+            aa_val = str(r.get("auto_adapt", True)).strip() == "True"
+            k = (str(r["scenario_id"]), str(r["model_id"]), int(r["input_length"]), aa_val)
+            if k not in seen_keys:
+                seen_keys.add(k)
+                deduped_results.append(r)
+    success_results = deduped_results
 
-# 分析1: X类 vs Y类
-print("\n【分析1】漂移可见性对比: X类(不可见) vs Y类(部分可见), in=256")
-print("-" * 80)
-pairs = [("X2","Y1","均值平移"), ("X3","Y2","方差扩张"), ("X4","Y3","相位偏移")]
-for mid in MODEL_LIST:
-    print(f"\n  [{mid}]")
-    x1 = get_mae("X1", mid, 256)
-    if x1: print(f"    基准(X1) MAE = {x1:.4f}")
-    for xid, yid, desc in pairs:
-        x = get_mae(xid, mid, 256)
-        y = get_mae(yid, mid, 256)
-        if x and y:
-            imp = (x - y) / x * 100 if x > 0 else 0
-            print(f"    {desc:8s}: 不可见={x:.4f}  部分可见={y:.4f}  改善={imp:+.1f}%")
+    print(f"  去重后成功记录: {len(success_results)} 条\n")
+
+    def get_mae(sid, mid, ilen, aa=True):
+        for r in success_results:
+            aa_val = str(r.get("auto_adapt", True)).strip() == "True"
+            if (str(r["scenario_id"]) == sid and str(r["model_id"]) == mid and
+                int(r["input_length"]) == ilen and aa_val == aa):
+                return r["mae"]
+        return None
+
+    # 分析1: X类 vs Y类
+    print("\n【分析1】漂移可见性对比: X类(不可见) vs Y类(部分可见), in=256")
+    print("-" * 80)
+    pairs = [("X2","Y1","均值平移"), ("X3","Y2","方差扩张"), ("X4","Y3","相位偏移")]
+    for mid in MODEL_LIST:
+        print(f"\n  [{mid}]")
+        x1 = get_mae("X1", mid, 256)
+        if x1: print(f"    基准(X1) MAE = {x1:.4f}")
+        for xid, yid, desc in pairs:
+            x = get_mae(xid, mid, 256)
+            y = get_mae(yid, mid, 256)
+            if x and y:
+                imp = (x - y) / x * 100 if x > 0 else 0
+                print(f"    {desc:8s}: 不可见={x:.4f}  部分可见={y:.4f}  改善={imp:+.1f}%")
+            else:
+                print(f"    {desc:8s}: 数据缺失")
+
+    # 分析2: Z类(协变量)
+    print("\n\n【分析2】协变量传递效果")
+    print("-" * 80)
+    for mid in MODEL_LIST:
+        print(f"\n  [{mid}]")
+        for il in INPUT_LENGTHS:
+            x2 = get_mae("X2", mid, il)
+            y1 = get_mae("Y1", mid, il)
+            z1 = get_mae("Z1", mid, il)
+            z2 = get_mae("Z2", mid, il)
+            parts = []
+            if x2 is not None: parts.append(f"不可见={x2:.4f}")
+            if y1 is not None: parts.append(f"部分可见={y1:.4f}")
+            if z1 is not None: parts.append(f"协变量={z1:.4f}")
+            if z2 is not None: parts.append(f"协变量+可见={z2:.4f}")
+            print(f"    in={il:>3d}: {'  '.join(parts) if parts else '数据缺失'}")
+
+    # 分析3: input_length 影响
+    print("\n\n【分析3】input_length 对漂移捕捉的影响(Y4)")
+    print("-" * 80)
+    for mid in MODEL_LIST:
+        print(f"\n  [{mid}]")
+        mbl = {}
+        for il in INPUT_LENGTHS:
+            m = get_mae("Y4", mid, il)
+            if m:
+                mbl[il] = m
+                print(f"    in={il:>3d}: MAE={m:.4f}")
+        if len(mbl) >= 2:
+            sl = sorted(mbl.keys())
+            ml = [mbl[k] for k in sl]
+            if ml[-1] < ml[0] * 0.9: print(f"    -> 长窗口有收益")
+            elif ml[-1] > ml[0] * 1.1: print(f"    -> 长上下文可能是负担")
+            else: print(f"    -> 长短窗口接近")
+
+    # 分析4: auto_adapt ablation
+    print("\n\n【分析4】auto_adapt 开关对比(Y4)")
+    print("-" * 80)
+    for mid in MODEL_LIST:
+        print(f"\n  [{mid}]")
+        for il in INPUT_LENGTHS:
+            on = get_mae("Y4", mid, il, True)
+            off = get_mae("Y4", mid, il, False)
+            if on and off:
+                d = off - on
+                p = d / off * 100 if off > 0 else 0
+                print(f"    in={il:>3d}: on={on:.4f}  off={off:.4f}  差={d:+.4f} ({p:+.1f}%)")
+            else:
+                print(f"    in={il:>3d}: 数据缺失")
+
+    # 分析5: 复合漂移
+    print("\n\n【分析5】复合漂移: 不可见(X5) vs 部分可见(Y4), in=256")
+    print("-" * 80)
+    for mid in MODEL_LIST:
+        x5 = get_mae("X5", mid, 256)
+        y4 = get_mae("Y4", mid, 256)
+        if x5 and y4:
+            imp = (x5 - y4) / x5 * 100 if x5 > 0 else 0
+            print(f"  {mid:>14s}: 不可见={x5:.4f}  部分可见={y4:.4f}  改善={imp:+.1f}%")
         else:
-            print(f"    {desc:8s}: 数据缺失")
+            print(f"  {mid:>14s}: 数据缺失")
 
-# 分析2: Z类(协变量)
-print("\n\n【分析2】协变量传递效果")
-print("-" * 80)
-for mid in MODEL_LIST:
-    print(f"\n  [{mid}]")
-    for il in INPUT_LENGTHS:
-        x2 = get_mae("X2", mid, il)
-        y1 = get_mae("Y1", mid, il)
-        z1 = get_mae("Z1", mid, il)
-        z2 = get_mae("Z2", mid, il)
-        parts = []
-        if x2 is not None: parts.append(f"不可见={x2:.4f}")
-        if y1 is not None: parts.append(f"部分可见={y1:.4f}")
-        if z1 is not None: parts.append(f"协变量={z1:.4f}")
-        if z2 is not None: parts.append(f"协变量+可见={z2:.4f}")
-        print(f"    in={il:>3d}: {'  '.join(parts) if parts else '数据缺失'}")
+    # ============================================================
+    # 6. 保存结果与汇总
+    # ============================================================
+    remaining = total_needed - len(success_results)
 
-# 分析3: input_length 影响
-print("\n\n【分析3】input_length 对漂移捕捉的影响(Y4)")
-print("-" * 80)
-for mid in MODEL_LIST:
-    print(f"\n  [{mid}]")
-    mbl = {}
-    for il in INPUT_LENGTHS:
-        m = get_mae("Y4", mid, il)
-        if m:
-            mbl[il] = m
-            print(f"    in={il:>3d}: MAE={m:.4f}")
-    if len(mbl) >= 2:
-        sl = sorted(mbl.keys())
-        ml = [mbl[k] for k in sl]
-        if ml[-1] < ml[0] * 0.9: print(f"    -> 长窗口有收益")
-        elif ml[-1] > ml[0] * 1.1: print(f"    -> 长上下文可能是负担")
-        else: print(f"    -> 长短窗口接近")
+    print(f"\n{'=' * 90}")
+    print("最终汇总")
+    print("=" * 90)
+    print(f" CSV results path: {RESULT_CSV_PATH}")
+    print(f"  成功记录(去重): {len(success_results)} / 实际需完成: {total_needed}")
+    print("-" * 90)
+    print(f"  任务统计:")
+    print(f"    原始任务总数:           {TOTAL_RAW} 次")
+    print(f"    - 模型不支持协变量跳过:  {NO_COV_SKIP_COUNT} 次  (Timer-3.5/Timer-3.0 * Z场景)")
+    print(f"    - 消融去重(Y4/adapt=True): {DEDUP_SKIP_COUNT} 次  (与主测试重复)")
+    print(f"    - API永久失败(422等):    {perm_fail_count} 次")
+    print(f"    实际需完成:             {total_needed} 次")
+    print(f"    成功(去重):             {len(success_results)} 次")
+    if remaining > 0:
+        print(f"    待完成(含429待重试):    {remaining} 次")
+    print("-" * 90)
 
-# 分析4: auto_adapt ablation
-print("\n\n【分析4】auto_adapt 开关对比(Y4)")
-print("-" * 80)
-for mid in MODEL_LIST:
-    print(f"\n  [{mid}]")
-    for il in INPUT_LENGTHS:
-        on = get_mae("Y4", mid, il, True)
-        off = get_mae("Y4", mid, il, False)
-        if on and off:
-            d = off - on
-            p = d / off * 100 if off > 0 else 0
-            print(f"    in={il:>3d}: on={on:.4f}  off={off:.4f}  差={d:+.4f} ({p:+.1f}%)")
-        else:
-            print(f"    in={il:>3d}: 数据缺失")
-
-# 分析5: 复合漂移
-print("\n\n【分析5】复合漂移: 不可见(X5) vs 部分可见(Y4), in=256")
-print("-" * 80)
-for mid in MODEL_LIST:
-    x5 = get_mae("X5", mid, 256)
-    y4 = get_mae("Y4", mid, 256)
-    if x5 and y4:
-        imp = (x5 - y4) / x5 * 100 if x5 > 0 else 0
-        print(f"  {mid:>14s}: 不可见={x5:.4f}  部分可见={y4:.4f}  改善={imp:+.1f}%")
+    if remaining == 0:
+        print(f" 全部完成！")
+    elif stop_by_rate_limit:
+        print(f" 未全部完成, 请获取API额度后续继续跑.")
     else:
-        print(f"  {mid:>14s}: 数据缺失")
+        print(f" 未全部完成, 请检查其他错误.")
+    print("=" * 90)
 
 
-# ============================================================
-# 6. 保存结果与汇总
-# ============================================================
-remaining = total_needed - len(success_results)
-
-print(f"\n{'=' * 90}")
-print("最终汇总")
-print("=" * 90)
-print(f" CSV results path: {RESULT_CSV_PATH}")
-print(f"  成功记录(去重): {len(success_results)} / 实际需完成: {total_needed}")
-print("-" * 90)
-print(f"  任务统计:")
-print(f"    原始任务总数:           {TOTAL_RAW} 次")
-print(f"    - 模型不支持协变量跳过:  {NO_COV_SKIP_COUNT} 次  (Timer-3.5/Timer-3.0 * Z场景)")
-print(f"    - 消融去重(Y4/adapt=True): {DEDUP_SKIP_COUNT} 次  (与主测试重复)")
-print(f"    - API永久失败(422等):    {perm_fail_count} 次")
-print(f"    实际需完成:             {total_needed} 次")
-print(f"    成功(去重):             {len(success_results)} 次")
-if remaining > 0:
-    print(f"    待完成(含429待重试):    {remaining} 次")
-print("-" * 90)
-
-if remaining == 0:
-    print(f"✅ 全部完成！")
-elif stop_by_rate_limit:
-    print(f"⏳ 未全部完成, 请获取API额度后续继续跑.")
-else:
-    print(f"⏳ 未全部完成, 请检查其他错误.")
-print("=" * 90)
+if __name__ == "__main__":
+    main()
