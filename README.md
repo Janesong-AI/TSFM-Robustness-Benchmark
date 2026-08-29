@@ -20,13 +20,13 @@ The project follows a standard layered architecture:
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
-- `features/`: Business feature implementation layer, contains specific business scenario logic
+- `testcases/`: Business Scenario Test Cases
 - `utils/`: Utility Layer (Stateless pure functions)
-  - `concurrent.py`: Concurrency control and process coordination module.
+  - `log/`: Logging Management Module (Encapsulates core logging logic, formatters, and context handlers).
   - `client.py`: Low-level Client Connection.
+  - `concurrent.py`: Concurrency control and process coordination module.
   - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
   - `files.py`: File Operation Utils.
-  - `log/`: Logging Management Module (Encapsulates core logging logic, formatters, and context handlers).
   - `metrics.py`: Evaluation Metrics Calculator.
   - `runner.py`: Test execution core primitives (AST static discovery + single-case execution + in-memory result tracking).
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.

@@ -2,7 +2,7 @@
 core —— Business Core Layer
 
 Provides centralized management for business logic, state, and external interactions.
-Serves as the bridge between the ``features`` layer and ``utils`` layer.
+Serves as the bridge between the ``testcases`` layer and ``utils`` layer.
 
 Modules:
 -------

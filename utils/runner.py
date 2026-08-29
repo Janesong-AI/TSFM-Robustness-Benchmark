@@ -46,7 +46,7 @@ class TestDiscoverer:
 
     def __init__(self, logger=None):
         self.logger = logger or get_logger("discoverer")
-        self.features_root = PROJECT_ROOT / "features"
+        self.testcases_root = PROJECT_ROOT / "testcases"
 
     def discover(
         self,
@@ -57,7 +57,7 @@ class TestDiscoverer:
         """
         Discover all test modules and return a list of module paths.
         """
-        search_root = Path(directory) if directory else self.features_root
+        search_root = Path(directory) if directory else self.testcases_root
 
         if not search_root.exists():
             self.logger.warning(f"Search directory does not exist: {search_root}")
@@ -309,9 +309,9 @@ def parse_module_path(raw_path: str) -> str:
     """
     Resolve a user-provided path into a standard module path.
     Supports:
-      - features.futureCovs.dirtyData.test_dirty
-      - ./features/futureCovs/dirtyData/test_dirty.py
-      - features/futureCovs/dirtyData/test_dirty.py
+      - testcases.futureCovs.dirtyData.dirty_test
+      - ./testcases/futureCovs/dirtyData/dirty_test.py
+      - testcases/futureCovs/dirtyData/dirty_test.py
     """
     if raw_path.startswith("./") or raw_path.endswith(".py") or "/" in raw_path:
         file_path = Path(raw_path).resolve()

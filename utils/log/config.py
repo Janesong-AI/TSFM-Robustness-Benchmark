@@ -149,11 +149,9 @@ def get_log_level() -> int:
     """Gets the integer representation of the log level."""
     return LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO)
 
-
 def is_async_enabled() -> bool:
     """Checks if asynchronous logging is enabled."""
     return LOG_QUEUE_SIZE > 0
-
 
 def get_log_file_path() -> Path:
     """Gets the full path to the log file."""

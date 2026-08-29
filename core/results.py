@@ -17,14 +17,13 @@ Core Features:
 
 Module Position in Architecture:
   - Calls: utils.concurrent (Concurrent Safety), utils.files (file operations), utils.logger (logging)
-  - Called by: features.* (business logic), resume.py (breakpoint logic)
+  - Called by: testcases.* (business logic), resume.py (breakpoint logic)
 
 Author: Janesong
 Create Date: 2026/07/19, Updated on 2026/08/25.
 """
 
-import json
-import tempfile
+import json, tempfile
 from pathlib import Path
 from typing import Any
 from core.resume import is_rate_limited
@@ -367,7 +366,7 @@ def append_result_to_csv(
     """
     Append test result to CSV with batch buffering.
 
-    Features:
+    Core Features:
         - Batch buffering to reduce I/O overhead
         - Auto-flush when buffer reaches batch_size
         - Independent buffer per file (safe for concurrent tasks)
@@ -500,7 +499,7 @@ def get_results_by_scene(results_data: list[dict[str, Any]],
         >>> get_results_by_scene(results, "S0")
         [{'model_id': 'Timer-3.5', 'scene': 'S0-Clean[Preprocessed]', 'pass_name': 'Preprocessed', 'mae': 0.5}]
     """
-    return [record for record in results_data  if record.get("scene", "").startswith(scene_prefix)]
+    return [record for record in results_data if record.get("scene", "").startswith(scene_prefix)]
 
 def get_results_by_passname(results_data: list[dict[str, Any]], 
                         pass_name: str) -> list[dict[str, Any]]:

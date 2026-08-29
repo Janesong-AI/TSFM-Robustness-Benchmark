@@ -39,7 +39,7 @@ def get_logger(name: str = 'root', **kwargs) -> Logger:
         Logger instance.
 
     Example:
-        >>> logger = get_logger('features.futureCovs.irregularSampling.irregular_sampling_test')
+        >>> logger = get_logger('testcases.futureCovs.dirtyData.dirty_test')
     """
     return Logger.get_logger(name, **kwargs)
 

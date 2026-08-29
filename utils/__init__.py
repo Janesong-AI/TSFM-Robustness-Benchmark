@@ -39,9 +39,9 @@ concurrent.py —— (Internal) Concurrent Utilities
 
 Usage Conventions:
 --------------------------
-1. Business modules (e.g., features/) should access TimechoAI services indirectly through core.timecho.
+1. Business modules (e.g., testcases/) should access TimechoAI services indirectly through core.timecho.
 2. The core layer is the only module that directly uses utils.client.
-3. Files and data_sanitizer can be used directly by core layers, but features should prefer core interfaces.
+3. Files and data_sanitizer can be used directly by core layers, but testcases should prefer core interfaces.
 
 Import Path Examples:
 -----------------------------

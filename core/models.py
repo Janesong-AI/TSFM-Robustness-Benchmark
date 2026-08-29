@@ -19,8 +19,7 @@ Design Principles:
   - Language can be switched via environment variable TEST_LANG (zh_CN/en_US)
 """
 
-import os
-import time
+import os, time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any

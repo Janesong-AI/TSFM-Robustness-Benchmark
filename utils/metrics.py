@@ -56,7 +56,6 @@ def calc_metrics(
 
     # 2. MAPE: Calculate only on data points with valid denominators (mask out near-zero/zero values)
     mask = np.abs(ground_truth) > threshold
-    
     if np.any(mask):
         # Calculate MAPE only for valid points
         mape = float(np.mean(

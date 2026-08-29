@@ -6,8 +6,7 @@ utils/log/handlers.py -- Log Handler Management
 Responsible for creating and configuring various log handlers.
 """
 
-import sys
-import logging
+import sys, logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 from utils.log.config import (
     LOGS_DIR,

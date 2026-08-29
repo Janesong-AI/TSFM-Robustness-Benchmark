@@ -5,17 +5,12 @@ TSFM-Robustness-Benchmark — Unified Entry Point
 
 Usage:
   # Single test case
-  python run.py features.futureCovs.dirtyData.dirty_test
-  python run.py features.futureCovs.conceptDrift.concept_drift_test
+  python run.py testcases.futureCovs.dirtyData.dirty_test
 
   # File path is also acceptable
-  python run.py ./features/futureCovs/dirtyData/dirty_test.py
-  python run.py ./features/futureCovs/conceptDrift/concept_drift_test.py
+  python run.py ./testcases/futureCovs/dirtyData/dirty_test.py
 
   # To run all cases in batch, please use pytest
-  #   pytest features/
-  #   pytest features/ -k dirty
-  #   pytest features/ -k concept_drift -v
 
 Environment Variable Options:
   LOG_LEVEL=DEBUG              Set log level
@@ -34,7 +29,7 @@ sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from config.settings import PROJECT_ROOT
 from utils.log import get_logger, get_log_file_path, flush_all_logs, get_log_level
-from utils.runner import TestRunner, TestStatus, parse_module_path
+from utils.runner import TestRunner, parse_module_path
 
 if sys.platform == "win32":
     # Change the console code page to UTF-8 (65001) to support Unicode output.
@@ -47,16 +42,15 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 For batch execution, please use pytest:
-  pytest features/                    # Run all tests
-  pytest features/ -k dirty           # Filter by name
-  pytest features/ -k concept_drift   # Filter by name
-  pytest features/ -v                 # Verbose output
+  pytest testcases/                    # Run all tests
+  pytest testcases/ -k concept_drift   # Filter by name
+  pytest testcases/ -v                 # Verbose output
 """,
     )
 
     parser.add_argument(
         "module",
-        help="Test module path (e.g., features.futureCovs.dirtyData.dirty_test)"
+        help="Test module path (e.g., testcases.futureCovs.dirtyData.dirty_test)"
     )
     args = parser.parse_args()
 

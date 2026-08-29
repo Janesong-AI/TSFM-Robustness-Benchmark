@@ -18,12 +18,13 @@ Calling Convention:
         from timecho_ai import TimechoAIClient # Business modules should not reference SDK directly
 
   In the entire project, only core/timecho.py is the direct caller of utils.client.
-  All test scripts under features/ use this factory indirectly through core.timecho.forecast().
+  All test scripts under testcases/ use this factory indirectly through core.timecho.forecast().
 
 Author: Janesong
 Create Date: 2026/06/29.
 """
 
+import asyncio
 from timecho_ai import TimechoAIClient, TimechoAIAsyncClient
 from config.settings import API_KEY
 
@@ -141,7 +142,6 @@ def _warmup_async_client(client: TimechoAIAsyncClient) -> None:
     Args:
         client: TimechoAIAsyncClient instance.
     """
-    import asyncio
 
     async def _do_warmup() -> None:
         # Trigger async session creation without making any API calls.
@@ -171,8 +171,6 @@ def reset_async_client() -> None:
     global _async_client
     if _async_client is not None:
         try:
-            import asyncio
-
             async def _close():
                 await _async_client.aclose()
 

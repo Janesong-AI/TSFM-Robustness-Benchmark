@@ -295,14 +295,14 @@ print("=" * 100)
 
 for model_id in MODEL_LIST:
     model_results = [r for r in results_data if r["model_id"] == model_id]
-    
+
     if len(model_results) == 0:
         print(f"  [{model_id}] No result data")
         continue
-    
+
     print(f"\n  【{model_id}】")
     s0_pre = get_results(results_data, model_id, "S0", "Preprocessed")
-    
+
     if not s0_pre or not s0_pre["success"]:
         print(f"    [Warning] Baseline scenario failed, unable to evaluate robustness.")
         continue

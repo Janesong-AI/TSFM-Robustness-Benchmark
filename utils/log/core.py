@@ -6,13 +6,8 @@ utils/log/core.py -- Core Logger Class
 Provides a singleton logger with support for asynchronous logging and concurrency safety.
 """
 
-import logging
-import threading
-import atexit
-import queue
+import logging, threading, atexit, queue
 from logging.handlers import QueueHandler, QueueListener
-from typing import Optional, List
-
 from utils.log.config import (
     LOG_LEVEL,
     LOG_CONSOLE_OUTPUT,
@@ -21,7 +16,6 @@ from utils.log.config import (
     LOG_QUEUE_SIZE,
     LEVEL_MAP,
     VALID_LEVELS,
-    LOG_DIR,
 )
 from utils.log.handlers import create_handlers
 from utils.log.filters import ModuleLevelFilter, IgnoredLoggerFilter
@@ -31,7 +25,7 @@ class Logger:
     """
     Logger Management Class - Singleton Pattern
 
-    Features:
+    Core Features:
         - Unified Logging: Consolidates all logs into a single log file (e.g., outputs/logs/tsfm_benchmark.log).
         - Thread-Safe: Ensures concurrency safety (uses locking).
         - Async Support: Supports asynchronous logging via QueueHandler and QueueListener.
@@ -44,9 +38,9 @@ class Logger:
 
     # Global shared resources (initialized only once)
     _initialized_global = False
-    _queue_listener: Optional[QueueListener] = None
-    _log_queue: Optional[queue.Queue] = None
-    _shared_handlers: List[logging.Handler] = []  # Handlers shared by all loggers
+    _queue_listener: QueueListener | None = None
+    _log_queue: queue.Queue | None = None
+    _shared_handlers: list[logging.Handler] = []  # Handlers shared by all loggers
 
     def __new__(cls, name: str = 'root', *args, **kwargs):
         """Singleton pattern: Returns the same instance for identical names."""
@@ -163,7 +157,7 @@ class Logger:
                     cls._shared_handlers = handlers
 
     @classmethod
-    def _setup_async_handlers(cls, handlers: List[logging.Handler]):
+    def _setup_async_handlers(cls, handlers: list[logging.Handler]):
         """Async mode: All handlers are managed via QueueListener."""
         if cls._queue_listener is None:
             cls._queue_listener = QueueListener(
@@ -184,7 +178,7 @@ class Logger:
             cls._queue_listener.stop()
             cls._queue_listener = None
 
-    def _get_shared_handlers(self) -> List[logging.Handler]:
+    def _get_shared_handlers(self) -> list[logging.Handler]:
         """Retrieves shared handlers; creates QueueHandler if async mode is enabled."""
         if LOG_QUEUE_SIZE > 0 and Logger._log_queue is not None:
             # Async mode: Each logger uses a QueueHandler to enqueue logs

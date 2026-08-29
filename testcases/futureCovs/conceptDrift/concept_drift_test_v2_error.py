@@ -76,7 +76,7 @@ from utils.metrics import calc_metrics
 # ============================================================
 OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "conceptDrift"
 OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
-RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2_error.csv" 
+RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2_error.csv"
 
 N_CONTEXT = CONTEXT_LENGTH_512      # 上下文窗口总长度(历史段)
 N_FORECAST = FORECAST_POINT_LEN_64  # Forecast length (64 points) 预测长度(64)
@@ -144,11 +144,11 @@ def build_scenarios():
     t_future = np.arange(N_CONTEXT, N_TOTAL)
     future_trend = np.linspace(BASE_TREND_END, BASE_TREND_END + 15, N_FORECAST)
     future_seasonal = BASE_SEASONAL_AMP * np.sin(2 * np.pi * t_future / BASE_SEASONAL_PERIOD)
-    
+
     np.random.seed(42)
     future_noise_base = np.random.randn(N_FORECAST) * BASE_NOISE_STD
     future_noise_3x = future_noise_base * DRIFT_NOISE_MULTIPLIER
-    
+
     future_variance_expansion = (future_trend + future_seasonal + future_noise_3x).round(4)
     future_phase_shift = (future_trend + BASE_SEASONAL_AMP * np.sin(2 * np.pi * t_future / BASE_SEASONAL_PERIOD + DRIFT_PHASE_SHIFT) + future_noise_base).round(4)
     future_compound = (future_trend + DRIFT_MEAN_SHIFT + BASE_SEASONAL_AMP * np.sin(2 * np.pi * t_future / BASE_SEASONAL_PERIOD + DRIFT_PHASE_SHIFT) + future_noise_3x).round(4)
@@ -234,7 +234,7 @@ def build_scenarios():
         "future_covs": future_cov_z1,
         "description": "协变量信号(历史无, 未来有)"
     })
-    
+
     # Z2: 历史段末尾逐渐升高的协变量, 未来继续为全1
     y_history_mean = build_y_history('mean_shift')  # 复用 Y1 的历史目标值
     history_cov_z2 = pd.DataFrame({
@@ -272,7 +272,7 @@ def run_forecast(scenario, model_id, in_len, auto_adapt=True):
     """
     # 提取 targets (必须包含 time 和 target)
     targets_df = scenario["history"][["time", "target"]].iloc[-in_len:].copy()
-    
+
     # 提取历史协变量(如果存在除 time, target 之外的列)
     history_covs_df = None
     if len(scenario["history"].columns) > 2:

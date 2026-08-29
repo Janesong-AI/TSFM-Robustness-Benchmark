@@ -35,11 +35,9 @@ aiohttp.ClientSession._request = _hooked_aiohttp_request
 # ============================================================
 
 import time
-from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
-import requests
 
 from utils.client import get_timecho_client
 
