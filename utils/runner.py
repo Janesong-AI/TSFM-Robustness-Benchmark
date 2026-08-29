@@ -23,7 +23,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from config.settings import PROJECT_ROOT
 from utils.log import get_logger
-from core.models import TestStatus, TestResult, BatchReport  # noqa: F401
+from core.models import TestStatus, TestResult  # noqa: F401
 
 
 # ============================================================
@@ -42,7 +42,7 @@ class TestDiscoverer:
     """
 
     ENTRY_POINTS = ("main", "run", "start")
-    TEST_PATTERNS = ("test_*.py")
+    TEST_PATTERNS = ("test_*.py", "*_test.py")
 
     def __init__(self, logger=None):
         self.logger = logger or get_logger("discoverer")
@@ -67,8 +67,6 @@ class TestDiscoverer:
         discovered = []
 
         for py_file in sorted(search_root.rglob("*.py")):
-            if py_file.name.startswith("__"):
-                continue
             if not self._is_test_file(py_file):
                 continue
 
@@ -91,8 +89,13 @@ class TestDiscoverer:
         return discovered
 
     def _is_test_file(self, py_file: Path) -> bool:
+        import fnmatch
+
         name = py_file.name
-        return any(name.endswith(p.replace("*", "")) for p in self.TEST_PATTERNS)
+        if name.startswith("_"):
+            return False
+
+        return any(fnmatch.fnmatchcase(name, p) for p in self.TEST_PATTERNS)
 
     def _file_to_module_path(self, py_file: Path) -> str | None:
         try:
