@@ -11,7 +11,8 @@ Usage:
     logger = get_logger('my_module')
     logger.info("Hello World")
 """
-
+import threading
+_default_logger_lock = threading.Lock()
 from .core import Logger
 from .decorators import log_execution, log_time
 from .context import LogLevelContext
@@ -46,8 +47,9 @@ def get_logger(name: str = 'root', **kwargs) -> Logger:
 def get_default_logger() -> Logger:
     """Retrieves the default logger instance."""
     global _default_logger
-    if _default_logger is None:
-        _default_logger = get_logger('default')
+    with _default_logger_lock:
+        if _default_logger is None:
+            _default_logger = get_logger('default')
     return _default_logger
 
 
