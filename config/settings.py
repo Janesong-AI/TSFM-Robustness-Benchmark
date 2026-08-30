@@ -14,7 +14,7 @@ from pathlib import Path
 PROJECT_ROOT: Path = Path(__file__).resolve().parents[1]
 
 # Derived paths (defined centrally here; other modules use read-only references)
-DATA_DIR:    Path = PROJECT_ROOT / "data"
+TESTCASES_DIR: Path = PROJECT_ROOT / "testcases"
 OUTPUT_DIR:  Path = PROJECT_ROOT / "outputs"
 RESULTS_DIR: Path = OUTPUT_DIR / "results"
 LOGS_DIR:    Path = OUTPUT_DIR / "logs"
@@ -31,6 +31,8 @@ API_KEY: str = os.getenv(
 )
 
 # Automatically ensure key directories exist (idempotent operation)
-for _dir in (DATA_DIR, OUTPUT_DIR, LOGS_DIR, RESULTS_DIR):
-    _dir.mkdir(parents=True, exist_ok=True)
+from utils.files import ensure_dir
+
+for _dir in (OUTPUT_DIR, LOGS_DIR, RESULTS_DIR):
+    ensure_dir(_dir)
 

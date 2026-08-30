@@ -125,7 +125,6 @@ def save_to_csv(
 
     return file_path
 
-
 def append_to_csv(
     result_csv_path_file: str | Path,
     data: dict[str, Any] | list[dict[str, Any]],
@@ -159,7 +158,6 @@ def append_to_csv(
         encoding=encoding,
         columns=columns
     )
-
 
 def save_with_json_backup(
     result_csv_path_file: str | Path,
@@ -222,34 +220,33 @@ def read_csv_to_dataframe(
 ) -> pd.DataFrame:
     """
     Read CSV file as DataFrame
-    
+
     Args:
         result_csv_path_file: CSV file path (including filename), required parameter
         encoding: File encoding, default 'utf-8'
         **kwargs: Additional pandas read_csv parameters
-        
+
     Returns:
         pd.DataFrame: Read data
-        
+
     Raises:
         CSVFileError: Raised when file does not exist or read fails
-        
+
     Example:
         >>> df = read_csv_to_dataframe("./results/test.csv")
     """
     if not result_csv_path_file:
         raise CSVFileError("result_csv_path_file parameter cannot be empty")
-    
+
     file_path = Path(result_csv_path_file)
-    
+
     if not file_path.exists():
         raise CSVFileError(f"File does not exist: {file_path}")
-    
+
     try:
         return pd.read_csv(file_path, encoding=encoding, **kwargs)
     except Exception as exp:
         raise CSVFileError(f"Failed to read CSV file: {file_path}\nError: {exp}")
-
 
 def read_csv_to_list(
     result_csv_path_file: str | Path,
@@ -257,11 +254,11 @@ def read_csv_to_list(
 ) -> list[dict[str, Any]]:
     """
     Read CSV file as list of dictionaries
-    
+
     Args:
         result_csv_path_file: CSV file path (including filename), required parameter
         encoding: File encoding, default 'utf-8'
-        
+
     Returns:
         List[Dict[str, Any]]: List of dictionaries, each dictionary represents one row of data
 
@@ -302,4 +299,22 @@ def csv_exists_and_not_empty(result_csv_path_file: str | Path) -> bool:
         return len(df) > 0
     except Exception:
         return False
+
+
+def ensure_dir(path) -> Path:
+    """
+    Ensure a directory exists, creating it and any necessary parent directories.
+
+    If the directory already exists, no error is raised. Returns the corresponding Path object.
+    Accepts either a string or a Path object as input.
+
+    Usage:
+        ensure_dir(RESULTS_DIR / "features" / "dirtyData" / "data")
+    """
+    p = Path(path)
+    # If a file path is provided, create its parent directory instead.
+    if p.is_file():
+        p = p.parent
+    p.mkdir(parents=True, exist_ok=True)
+    return p
 
