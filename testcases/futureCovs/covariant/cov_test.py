@@ -14,18 +14,18 @@ Create Date: 2026/06/29, Update on 2026/07/12.
 import time
 import numpy as np
 
-from config.settings import DATA_DIR, RESULTS_DIR
+from config.settings import TESTCASES_DIR, RESULTS_DIR
 from config.constants import HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.metrics import calc_metrics, calc_diff
-from utils.files import read_csv_to_dataframe, save_with_json_backup
+from utils.files import read_csv_to_dataframe, save_with_json_backup, ensure_dir
 
 # ============================================================
 # Data related configuration
 # ============================================================
-CSV_PATH = DATA_DIR / "features" / "futureCovs" / "convariant" / "cov_test_data.csv"    # Test data file
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "convariant"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+CSV_PATH = TESTCASES_DIR / "futureCovs" / "convariant" / "data" / "cov_test_data.csv"    # Test data file
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "convariant"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_PATH = OUTPUT_SUBDIR / "cov_test_results.csv"    # Prediction results file
 
 MODEL_ID = "Auto"  # Model list: Auto / Timer-3.5 / Timer-3.0 / Chronos-2 / AutoARIMA / Holt-Winters

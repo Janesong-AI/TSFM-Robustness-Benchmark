@@ -12,18 +12,18 @@ Create Date: 2026/06/30, Update on 2026/07/19.
 
 import time
 
-from config.settings import DATA_DIR, RESULTS_DIR
+from config.settings import TESTCASES_DIR, RESULTS_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.metrics import calc_metrics
-from utils.files import read_csv_to_dataframe, save_with_json_backup
+from utils.files import read_csv_to_dataframe, save_with_json_backup, ensure_dir
 
 # ============================================================
 # Data related configuration
 # ============================================================
-CSV_PATH = DATA_DIR / "features" / "futureCovs" / "convariant" / "cov_test_data.csv"    # Test data file
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "convariant"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+CSV_PATH = TESTCASES_DIR / "futureCovs" / "convariant" / "data" / "cov_test_data.csv"    # Test data file
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "convariant"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_PATH = OUTPUT_SUBDIR / "cov_test_models_result.csv"    # Prediction results file
 
 # Read data
