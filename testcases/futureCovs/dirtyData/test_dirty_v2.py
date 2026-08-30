@@ -16,15 +16,14 @@ Create Date: 2026/06/29, Update on 2026/08/08.
 import time
 import numpy as np
 import pandas as pd
-
-from config.settings import DATA_DIR, RESULTS_DIR
+from config.settings import TESTCASES_DIR, RESULTS_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
-from utils.metrics import calc_metrics
 from core.results import get_results, load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
-from utils.files import read_csv_to_dataframe
+from utils.files import read_csv_to_dataframe, ensure_dir
 from utils.data_sanitizer import clean_nan_values
+from utils.metrics import calc_metrics
 from utils.log import get_logger
 
 logger = get_logger("test_dirty_v2")
@@ -32,10 +31,10 @@ logger = get_logger("test_dirty_v2")
 # ============================================================
 # Data related configuration
 # ============================================================
-DATA_SUBDIR = DATA_DIR / "features" / "futureCovs" / "dirtyData"    # Test data file path
+DATA_SUBDIR = TESTCASES_DIR / "futureCovs" / "dirtyData" / "data"    # Test data file path
 DATA_CSV_PATH = DATA_SUBDIR / "dirty_clean.csv"
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "dirtyData"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "dirtyData"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "test_dirty_result_v2.csv"    # Prediction results file 预测结果文件
 
 # 7 test scenarios
