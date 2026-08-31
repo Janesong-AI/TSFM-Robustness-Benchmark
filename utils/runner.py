@@ -312,9 +312,9 @@ def parse_module_path(raw_path: str) -> str:
     """
     Resolve a user-provided path into a standard module path.
     Supports:
-      - testcases.futureCovs.dirtyData.dirty_test
-      - ./testcases/futureCovs/dirtyData/dirty_test.py
-      - testcases/futureCovs/dirtyData/dirty_test.py
+      - testcases.futureCovs.dirtyData.test_dirty
+      - ./testcases/futureCovs/dirtyData/test_dirty.py
+      - testcases/futureCovs/dirtyData/test_dirty.py
     """
     if raw_path.startswith("./") or raw_path.endswith(".py") or "/" in raw_path:
         file_path = Path(raw_path).resolve()

@@ -40,7 +40,7 @@ def get_logger(name: str = 'root', **kwargs) -> Logger:
         Logger instance.
 
     Example:
-        >>> logger = get_logger('testcases.futureCovs.dirtyData.dirty_test')
+        >>> logger = get_logger('testcases.futureCovs.dirtyData.test_dirty')
     """
     return Logger.get_logger(name, **kwargs)
 
