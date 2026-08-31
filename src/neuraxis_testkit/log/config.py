@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/config.py -- Logging Configuration Definitions
+neuraxis_testkit/log/config.py -- Logging Configuration Definitions
 
 Supports overriding configurations via environment variables.
 """

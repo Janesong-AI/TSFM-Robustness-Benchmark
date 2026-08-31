@@ -16,7 +16,7 @@ Core Features:
   - Supports pytest-xdist multi-process environments
 
 Module Position in Architecture:
-  - Calls: utils.concurrent (Concurrent Safety), utils.files (file operations), utils.logger (logging)
+  - Calls: neuraxis_testkit.utils.concurrent (Concurrent Safety), neuraxis_testkit.utils.files (file operations), neuraxis_testkit.logger (logging)
   - Called by: testcases.* (business logic), resume.py (breakpoint logic)
 
 Author: Janesong
@@ -27,9 +27,9 @@ import json, tempfile
 from pathlib import Path
 from typing import Any
 from core.resume import is_rate_limited
-from utils.concurrent import FileLock, ProcessSafeCache
-from utils.files import append_to_csv, csv_exists_and_not_empty, read_csv_to_list
-from utils.log import get_logger
+from neuraxis_testkit.utils.concurrent import FileLock, ProcessSafeCache
+from neuraxis_testkit.utils.files import append_to_csv, csv_exists_and_not_empty, read_csv_to_list
+from neuraxis_testkit.log import get_logger
 
 logger = get_logger(__name__)
 
@@ -302,7 +302,7 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict[str, Any
         - Permanent failures (non-rate-limit errors)
         - Rate-limit errors (429)
 
-    Uses utils.files for file operations (follows layer architecture).
+    Uses neuraxis_testkit.utils.files for file operations (follows layer architecture).
 
     Args:
         result_csv_path_file: Result CSV file path.
@@ -312,13 +312,13 @@ def load_results_from_csv(result_csv_path_file: str) -> tuple[list[dict[str, Any
         - all_records: List of all records (each row as dict)
         - non_rate_limit_error: Count of non-rate-limit errors
     """
-    # Use methods provided by utils.files (follows layered architecture)
+    # Use methods provided by neuraxis_testkit.utils.files (follows layered architecture)
     if not csv_exists_and_not_empty(result_csv_path_file):
         logger.info(f"{Path(result_csv_path_file).name} not found, starting fresh")
         return [], 0
 
     try:
-        # Call utils.files.read_csv_to_list()
+        # Call neuraxis_testkit.utils.files.read_csv_to_list()
         all_records = read_csv_to_list(result_csv_path_file)
 
         # Classify error types
@@ -533,6 +533,6 @@ def _validate_result_format(result: dict) -> None:
 
 def _normalize_result(result: dict) -> dict:
     """Normalize result format (business logic)."""
-    from utils.data_sanitizer import clean_nan_values
+    from neuraxis_testkit.utils.data_sanitizer import clean_nan_values
     return clean_nan_values(result)
 

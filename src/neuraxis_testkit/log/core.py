@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/core.py -- Core Logger Class
+neuraxis_testkit/log/core.py -- Core Logger Class
 
 Provides a singleton logger with support for asynchronous logging and concurrency safety.
 """
 
 import logging, threading, atexit, queue
 from logging.handlers import QueueHandler, QueueListener
-from utils.log.config import (
+from neuraxis_testkit.log.config import (
     LOG_LEVEL,
     LOG_CONSOLE_OUTPUT,
     LOG_FILE_OUTPUT,
@@ -17,8 +17,8 @@ from utils.log.config import (
     LEVEL_MAP,
     VALID_LEVELS,
 )
-from utils.log.handlers import create_handlers
-from utils.log.filters import ModuleLevelFilter, IgnoredLoggerFilter
+from neuraxis_testkit.log.handlers import create_handlers
+from neuraxis_testkit.log.filters import ModuleLevelFilter, IgnoredLoggerFilter
 
 
 class Logger:

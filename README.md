@@ -22,13 +22,14 @@ The project follows a standard layered architecture:
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
-- `testcases/`: Business Scenario Test Cases
-- `utils/`: Foundational Utilities Layer (Stateless pure functions)
+- `neuraxis_testkit/`: Test Toolkit
   - `log/`: Logging management module (Encapsulates core logging logic, formatters, and context handlers).
-  - `concurrent.py`: Concurrency control and process coordination module (internal bridging module).
-  - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
-  - `files.py`: File Operation Utils.
-  - `runner.py`: Core Test execution primitives (AST static discovery + single-case execution + in-memory result tracking).
+  - `utils/`: Foundational Utilities Layer
+    - `concurrent.py`: Concurrency control and process coordination module (internal bridging module).
+    - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
+    - `files.py`: File Operation Utils.
+    - `runner.py`: Core Test execution primitives (AST static discovery + single-case execution + in-memory result tracking).
+- `testcases/`: Business Scenario Test Cases
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 - `run.py`: **Unified project entry point**, responsible for bootstrapping `sys.path` and launching specific test scripts by module name or file path.
 

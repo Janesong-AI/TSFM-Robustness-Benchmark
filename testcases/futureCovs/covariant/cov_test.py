@@ -18,7 +18,7 @@ from config.settings import TESTCASES_DIR, RESULTS_DIR
 from config.constants import HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from core.metrics import calc_metrics, calc_diff
-from utils.files import read_csv_to_dataframe, save_with_json_backup, ensure_dir
+from neuraxis_testkit.utils.files import read_csv_to_dataframe, save_with_json_backup, ensure_dir
 
 # ============================================================
 # Data related configuration

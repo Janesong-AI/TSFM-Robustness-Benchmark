@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/filters.py -- Logging Filters
+neuraxis_testkit/log/filters.py -- Logging Filters
 
 Contains filters for module-level log level overrides and ignoring specific loggers.
 """
 
 import logging
-from utils.log.config import MODULE_LEVEL_OVERRIDES, IGNORED_LOGGERS, LEVEL_MAP
+from neuraxis_testkit.log.config import MODULE_LEVEL_OVERRIDES, IGNORED_LOGGERS, LEVEL_MAP
 
 
 class ModuleLevelFilter(logging.Filter):

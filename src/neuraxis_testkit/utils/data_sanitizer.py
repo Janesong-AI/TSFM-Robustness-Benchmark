@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/data_sanitizer.py —— Data Sanitization & Type Safety Utilities
+neuraxis_testkit/utils/data_sanitizer.py —— Data Sanitization & Type Safety Utilities
 
 Module Purpose:
     Provides atomic, stateless data sanitization functions.
@@ -19,7 +19,7 @@ Module Position in Architecture:
 
 Usage Example:
 --------------
->>> from utils.data_sanitizer import clean_nan_values, safe_float
+>>> from neuraxis_testkit.utils.data_sanitizer import clean_nan_values, safe_float
 >>> 
 >>> # Clean data before saving to JSON
 >>> data = {"mae": 0.5, "rmse": float('nan')}

@@ -86,7 +86,7 @@ from core.results import load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
 from core.timecho import forecast
 from core.metrics import calc_metrics
-from utils.files import ensure_dir
+from neuraxis_testkit.utils.files import ensure_dir
 
 # ============================================================
 # 1. Data related configuration

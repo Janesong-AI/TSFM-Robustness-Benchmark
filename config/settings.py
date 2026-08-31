@@ -31,7 +31,7 @@ API_KEY: str = os.getenv(
 )
 
 # Automatically ensure key directories exist (idempotent operation)
-from utils.files import ensure_dir
+from neuraxis_testkit.utils.files import ensure_dir
 
 for _dir in (OUTPUT_DIR, LOGS_DIR, RESULTS_DIR):
     ensure_dir(_dir)

@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/formatters.py -- Logging Formatters
+neuraxis_testkit/log/formatters.py -- Logging Formatters
 
 Contains formatters for colored console output, etc.
 """
 
 import logging
 
-from utils.log.config import LOG_FORMAT, LOG_DATE_FORMAT, LOG_USE_COLOR
+from neuraxis_testkit.log.config import LOG_FORMAT, LOG_DATE_FORMAT, LOG_USE_COLOR
 
 
 class ColoredFormatter(logging.Formatter):

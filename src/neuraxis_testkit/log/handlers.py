@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/handlers.py -- Log Handler Management
+neuraxis_testkit/log/handlers.py -- Log Handler Management
 
 Responsible for creating and configuring various log handlers.
 """
 
 import sys, logging
 from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
-from utils.log.config import (
+from neuraxis_testkit.log.config import (
     LOGS_DIR,
     LOG_FILE_NAME,
     LOG_MAX_BYTES,
@@ -18,7 +18,7 @@ from utils.log.config import (
     LOG_WHEN,
     LOG_INTERVAL,
 )
-from utils.log.formatters import create_console_formatter, create_file_formatter
+from neuraxis_testkit.log.formatters import create_console_formatter, create_file_formatter
 
 
 def create_console_handler(level: int, use_color: bool = None) -> logging.Handler:

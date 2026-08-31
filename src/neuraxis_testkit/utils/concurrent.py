@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/concurrent.py — Concurrent-Safety Common Module
+neuraxis_testkit/utils/concurrent.py — Concurrent-Safety Common Module
 ====================================
 Provides cross-process safe caches, locks, and counters supporting concurrent read/write operations.
 Designed for pytest-xdist multi-process testing environments.
@@ -29,7 +29,7 @@ Create Date: 2026/08/25.
 import os, time, json, atexit, tempfile
 from pathlib import Path
 from typing import Any
-from utils.log import get_logger
+from neuraxis_testkit.log import get_logger
 
 try:
     import portalocker

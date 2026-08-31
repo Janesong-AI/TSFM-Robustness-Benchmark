@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils - Infrastructure Utility Layer
+neuraxis_testkit/utils - Infrastructure Utility Layer
 
 This package provides stateless pure functions and generic entity wrappers, serving as the
 underlying support for the entire project. It currently includes:
@@ -35,10 +35,10 @@ Usage Conventions:
 Import Path Examples:
 -----------------------------
 >>> # Utils layer usage (for core layer developers)
->>> from utils.log import get_logger, setup_logging
->>> from utils.data_sanitizer import clean_nan_values, safe_float
->>> from utils.files import save_to_csv, append_to_csv
->>> from utils.runner import parse_module_path
+>>> from neuraxis_testkit.log import get_logger, setup_logging
+>>> from neuraxis_testkit.utils.data_sanitizer import clean_nan_values, safe_float
+>>> from neuraxis_testkit.utils.files import save_to_csv, append_to_csv
+>>> from neuraxis_testkit.utils.runner import parse_module_path
 """
 
 __all__ = [

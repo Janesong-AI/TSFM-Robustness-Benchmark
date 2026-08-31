@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/files.py -- File operation utility module
+neuraxis_testkit/utils/files.py -- File operation utility module
 
 Provides unified CSV file read/write interface, supporting:
   - Multiple data format saving
@@ -309,7 +309,7 @@ def ensure_dir(path) -> Path:
     Accepts either a string or a Path object as input.
 
     Usage:
-        ensure_dir(RESULTS_DIR / "features" / "dirtyData" / "data")
+        ensure_dir(RESULTS_DIR / "futureCovs" / "dirtyData" / "data")
     """
     p = Path(path)
     # If a file path is provided, create its parent directory instead.

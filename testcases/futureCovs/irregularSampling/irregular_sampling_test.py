@@ -40,7 +40,7 @@ from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
 from core.timecho import forecast
 from core.metrics import calc_metrics
-from utils.files import save_to_csv, ensure_dir
+from neuraxis_testkit.utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 0. Configuration Constants

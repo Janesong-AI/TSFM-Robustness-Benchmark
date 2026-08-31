@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/__init__.py -- Unified Entry Point for Logging Module
+neuraxis_testkit/log/__init__.py -- Unified Entry Point for Logging Module
 
 Provides a concise logging interface and hides internal implementation details.
 
 Usage:
-    from utils.log import get_logger, setup_logging
+    from neuraxis_testkit.log import get_logger, setup_logging
 
     logger = get_logger('my_module')
     logger.info("Hello World")
@@ -79,7 +79,7 @@ def set_global_level(level: str):
     Raises:
         ValueError: If an invalid log level is provided.
     """
-    from utils.log.core import VALID_LEVELS
+    from neuraxis_testkit.log.core import VALID_LEVELS
     level_upper = level.upper()
     if level_upper not in VALID_LEVELS:
         raise ValueError(f"Invalid log level: '{level}'. Valid options are: {', '.join(sorted(VALID_LEVELS))}")

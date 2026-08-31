@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/decorators.py -- Logging Decorators
+neuraxis_testkit/log/decorators.py -- Logging Decorators
 
 Provides decorators for function execution logging and execution time tracking.
 """
@@ -10,8 +10,8 @@ import time
 from functools import wraps
 from typing import Callable
 
-from utils.log.core import Logger
-from utils.log.config import VALID_LEVELS
+from neuraxis_testkit.log.core import Logger
+from neuraxis_testkit.log.config import VALID_LEVELS
 
 
 def log_execution(
@@ -36,7 +36,7 @@ def log_execution(
         ... def my_function(x, y):
         ...     return x + y
     """
-    from utils.log import get_default_logger
+    from neuraxis_testkit.log import get_default_logger
     
     level_upper = level.upper()
     if level_upper not in VALID_LEVELS:
@@ -87,7 +87,7 @@ def log_time(logger: Logger | None = None, level: str = 'INFO'):
         ... def slow_function():
         ...     time.sleep(1)
     """
-    from utils.log import get_default_logger
+    from neuraxis_testkit.log import get_default_logger
 
     level_upper = level.upper()
     if level_upper not in VALID_LEVELS:

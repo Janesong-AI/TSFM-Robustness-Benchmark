@@ -28,8 +28,8 @@ _BOOTSTRAP_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from config.settings import PROJECT_ROOT
-from utils.log import get_logger, get_log_file_path, flush_all_logs, get_log_level
-from utils.runner import TestRunner, parse_module_path
+from neuraxis_testkit.log import get_logger, get_log_file_path, flush_all_logs, get_log_level
+from neuraxis_testkit.utils.runner import TestRunner, parse_module_path
 
 if sys.platform == "win32":
     # Change the console code page to UTF-8 (65001) to support Unicode output.

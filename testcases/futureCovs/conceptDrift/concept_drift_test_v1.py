@@ -35,7 +35,7 @@ from config.settings import RESULTS_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, TRAIN_SEQ_LEN_512
 from core.timecho import forecast
 from core.metrics import calc_metrics
-from utils.files import save_to_csv, ensure_dir
+from neuraxis_testkit.utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 1. Data related configuration

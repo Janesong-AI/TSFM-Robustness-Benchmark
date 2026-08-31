@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/runner.py — Test Runner Core
+neuraxis_testkit/utils/runner.py — Test Runner Core
 Core runner: test discovery + single-case execution + result tracking (in-memory)
 
 Design Principles:
@@ -22,7 +22,7 @@ if str(_PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(_PROJECT_ROOT))
 
 from config.settings import PROJECT_ROOT
-from utils.log import get_logger
+from neuraxis_testkit.log import get_logger
 from core.models import TestStatus, TestResult  # noqa: F401
 
 

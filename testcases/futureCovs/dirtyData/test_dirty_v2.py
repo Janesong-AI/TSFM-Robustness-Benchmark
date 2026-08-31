@@ -22,9 +22,9 @@ from core.timecho import forecast
 from core.results import get_results, load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
 from core.metrics import calc_metrics
-from utils.files import read_csv_to_dataframe, ensure_dir
-from utils.data_sanitizer import clean_nan_values
-from utils.log import get_logger
+from neuraxis_testkit.utils.files import read_csv_to_dataframe, ensure_dir
+from neuraxis_testkit.utils.data_sanitizer import clean_nan_values
+from neuraxis_testkit.log import get_logger
 
 logger = get_logger("test_dirty_v2")
 

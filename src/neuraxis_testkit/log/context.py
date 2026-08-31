@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-utils/log/context.py -- Logging Context Manager
+neuraxis_testkit/log/context.py -- Logging Context Manager
 
 Provides a context manager for temporarily modifying log levels.
 """
 
-from utils.log.core import Logger
-from utils.log.config import VALID_LEVELS
+from neuraxis_testkit.log.core import Logger
+from neuraxis_testkit.log.config import VALID_LEVELS
 
 
 class LogLevelContext:
