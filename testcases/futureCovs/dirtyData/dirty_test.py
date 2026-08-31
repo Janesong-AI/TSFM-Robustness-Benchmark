@@ -21,9 +21,9 @@ from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_L
 from core.timecho import forecast
 from core.results import get_results, load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
+from core.metrics import calc_metrics
 from utils.files import read_csv_to_dataframe, ensure_dir
 from utils.data_sanitizer import clean_nan_values
-from utils.metrics import calc_metrics
 
 # ============================================================
 # Data related configuration
@@ -188,7 +188,7 @@ for model_id in MODEL_LIST:
                     forecast_kwargs["history_covs"] = history_covs
                     forecast_kwargs["future_covs"] = future_cov
 
-                # Call API through core/timecho.py wrapper (indirectly uses utils/client.py)
+                # Call API through core/timecho.py wrapper
                 api_call_count += 1
                 print(f"     [{pass_name}] API call #{api_call_count}...")
 

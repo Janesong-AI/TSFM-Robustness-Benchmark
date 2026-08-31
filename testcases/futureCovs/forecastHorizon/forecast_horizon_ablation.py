@@ -17,9 +17,8 @@ Create Date: 2026/07/05
 
 import numpy as np
 import pandas as pd
-
 from core.timecho import forecast
-from utils.metrics import calc_metrics
+from core.metrics import calc_metrics
 from config.constants import TRAIN_SEQ_LEN_512, FORECAST_POINT_LEN_256
 
 # ============================================================
@@ -40,7 +39,7 @@ SCENARIOS = ["normal", "drift"]
 def generate_test_data():
     """Generate test data"""
     np.random.seed(42)
-    
+
     # Construct test data (generate 512+256=768 points in total)
     time_full = pd.date_range("2026-07-01", periods=N_TRAIN + MAX_FORECAST, freq="1h")
     time_history = time_full[:N_TRAIN]
@@ -128,7 +127,7 @@ def print_summary_table(results):
     print(f"{'='*80}")
     print(f"{'Scenario':<12s} | {'Model':<15s} | {'L=16':>8s} | {'L=32':>8s} | {'L=64':>8s} | {'L=128':>8s} | {'L=256':>8s}")
     print("-" * 80)
-    
+
     for scenario in SCENARIOS:
         scenario_name = "Normal Data" if scenario == "normal" else "B5 Drift"
         for model_id in MODELS:
@@ -172,7 +171,7 @@ def print_ratio_analysis(results):
     print(f"\n{'='*80}")
     print("Accuracy Decay Ratio (MAE at L=256 / MAE at L=16)")
     print(f"{'='*80}")
-    
+
     for scenario in SCENARIOS:
         scenario_name = "Normal Data" if scenario == "normal" else "B5 Drift"
         for model_id in MODELS:

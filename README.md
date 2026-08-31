@@ -16,6 +16,7 @@ The project follows a standard layered architecture:
   - `constants.py`: Global constants definition.
   - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
 - `core/`: Business Core Layer (Encapsulates logic and state)
+  - `metrics.py`: Evaluation Metrics Calculator.
   - `models.py`: Shared data models (TestStatus, TestResult, BatchReport).
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
@@ -27,7 +28,6 @@ The project follows a standard layered architecture:
   - `concurrent.py`: Concurrency control and process coordination module.
   - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
   - `files.py`: File Operation Utils.
-  - `metrics.py`: Evaluation Metrics Calculator.
   - `runner.py`: Test execution core primitives (AST static discovery + single-case execution + in-memory result tracking).
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 - `run.py`: **Unified project entry point**, responsible for bootstrapping `sys.path` and launching specific test scripts by module name or file path.

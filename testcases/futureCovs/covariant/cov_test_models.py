@@ -15,7 +15,7 @@ import time
 from config.settings import TESTCASES_DIR, RESULTS_DIR
 from config.constants import MODEL_LIST, HISTORY_POINT_LEN_256, FORECAST_POINT_LEN_64
 from core.timecho import forecast
-from utils.metrics import calc_metrics
+from core.metrics import calc_metrics
 from utils.files import read_csv_to_dataframe, save_with_json_backup, ensure_dir
 
 # ============================================================

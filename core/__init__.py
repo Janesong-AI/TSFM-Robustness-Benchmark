@@ -6,6 +6,10 @@ Serves as the bridge between the ``testcases`` layer and ``utils`` layer.
 
 Modules:
 -------
+metrics.py — Evaluation Metrics Calculator
+  Provides standard evaluation metrics (MAE, RMSE, MAPE) for time series forecasting models.
+  Pure mathematical calculation functions without side effects.
+
 models.py —— Shared Data Models
   Defines core data structures (TestStatus, TestResult, BatchReport) used across
   the entire framework. Supports i18n via TEST_LANG environment variable.
@@ -22,6 +26,8 @@ timecho.py —— TimechoAI Interaction Layer
 
 Usage:
 --------------
+>>> from core.metrics import calc_metrics, calc_diff, evaluate_prediction
+
 >>> # Data models
 >>> from core.models import TestStatus, TestResult, BatchReport
 >>> result = TestResult(module_path="test_xxx.py")
@@ -40,12 +46,13 @@ Usage:
 >>> if is_rate_limited("Error 429"):
 ...     print("Rate limit detected")
 
->>> # API interaction
+>>> # Recommended: Access via core layer
 >>> from core.timecho import forecast
 >>> forecast(data)
 """
 
 __all__ = [
+    "metrics",
     "models",
     "results",
     "resume",

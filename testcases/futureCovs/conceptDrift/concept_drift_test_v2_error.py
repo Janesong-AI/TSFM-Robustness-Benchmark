@@ -69,7 +69,7 @@ from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, CONTEXT_LENGTH_5
 from core.results import load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
 from core.timecho import forecast
-from utils.metrics import calc_metrics
+from core.metrics import calc_metrics
 from utils.files import ensure_dir
 
 # ============================================================

@@ -39,7 +39,7 @@ from typing import Any
 from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
 from core.timecho import forecast
-from utils.metrics import calc_metrics
+from core.metrics import calc_metrics
 from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
@@ -229,7 +229,7 @@ def _analyze_timestamp_usage(results: list[dict]) -> dict[str, Any]:
         "model_analysis": {},
         "overall_conclusion": ""
     }
-    
+
     for model_id in MODELS:
         model_results = [r for r in results if r["model_id"] == model_id and r["success"]]
         
@@ -279,12 +279,12 @@ def _analyze_timestamp_usage(results: list[dict]) -> dict[str, Any]:
         analysis["model_analysis"].get(m, {}).get("timestamps_utilized", False)
         for m in MODELS
     )
-    
+
     if all_utilized:
         analysis["overall_conclusion"] = "PASS: SDK correctly understands and utilizes timestamp semantics"
     else:
         analysis["overall_conclusion"] = "WARNING: SDK might ignore time_col and process by row order only"
-    
+
     return analysis
 
 
@@ -407,7 +407,7 @@ def run_irregular_sampling_test(
                     print(f"   [{model_id}] Exception: {str(exp)[:80]}")
 
             time.sleep(1)
-    
+
     # Step 3: Analyze timestamp usage
     analysis = _analyze_timestamp_usage(results)
 
@@ -427,7 +427,7 @@ def run_irregular_sampling_test(
             "failed_tests": sum(1 for r in results if not r["success"]),
         }
     }
-    
+
     return results, details
 
 
@@ -437,7 +437,7 @@ def run_irregular_sampling_test(
 def _print_results_summary(results: list[dict], analysis: dict[str, Any]) -> None:
     """
     Print formatted summary of test results and analysis.
-    
+
     Args:
         results: List of test results
         analysis: Analysis results from _analyze_timestamp_usage
@@ -469,7 +469,7 @@ def _print_results_summary(results: list[dict], analysis: dict[str, Any]) -> Non
 
     for model_id, model_analysis in analysis["model_analysis"].items():
         print(f"\n  [{model_id}]")
-        
+
         if model_analysis.get("status") == "insufficient_data":
             print(f"     Insufficient successful scenarios, unable to analyze")
             continue

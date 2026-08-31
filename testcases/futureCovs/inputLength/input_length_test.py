@@ -17,11 +17,10 @@ Create Date: 2026/06/29, Updated on 2026/08/14.
 import time
 import numpy as np
 import pandas as pd
-
 from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64
 from core.timecho import forecast
-from utils.metrics import calc_metrics
+from core.metrics import calc_metrics
 from utils.files import save_to_csv, ensure_dir
 
 # ============================================================

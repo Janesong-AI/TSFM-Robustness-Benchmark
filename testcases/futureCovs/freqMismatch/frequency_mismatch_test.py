@@ -38,7 +38,7 @@ import pandas as pd
 from config.settings import RESULTS_DIR
 from config import constants as CONSTANTS
 from core.timecho import forecast
-from utils.metrics import evaluate_prediction
+from core.metrics import evaluate_prediction
 from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
@@ -71,7 +71,7 @@ def generate_frequency_mismatch_data(
 ):
     """
     Generate frequency mismatch test data
-    
+
     Args:
         n_train: Training data length
         forecast_len: Prediction length
@@ -82,7 +82,7 @@ def generate_frequency_mismatch_data(
         seasonal_amp: Seasonal amplitude
         noise_std: Noise standard deviation
         seed: Random seed
-    
+
     Returns:
         df_history: Training data DataFrame
         futures: {mode_name: ground_truth_array}
@@ -156,7 +156,7 @@ def generate_frequency_mismatch_data(
 # ============================================================
 def run_frequency_mismatch_test():
     """Execute frequency mismatch test"""
-    
+
     print("=" * 90)
     print("C5 Frequency Mismatch Test")
     print("=" * 90)
@@ -164,7 +164,7 @@ def run_frequency_mismatch_test():
     # Test configuration
     eval_periods = [24, 12, 8, 48]  # Prediction periods
     models = ["Chronos-2", "Timer-3.5"]
-    
+
     # --------------------------------------------------------
     # 2.1 Data Generation
     # --------------------------------------------------------
@@ -190,7 +190,7 @@ def run_frequency_mismatch_test():
     print(f"    - Mean: {df_history['target'].mean():.2f}")
     print(f"    - Std:  {df_history['target'].std():.2f}")
     print(f"    - Range: [{df_history['target'].min():.2f}, {df_history['target'].max():.2f}]")
-    
+
     # --------------------------------------------------------
     # 2.2 Execute Prediction
     # --------------------------------------------------------
@@ -262,7 +262,7 @@ def run_frequency_mismatch_test():
     header = f"{'Model':<12s} | {'Mode':<25s} | {'Period':>6s} | {'MAE':>8s} | {'MAE_16':>8s} | {'MAE_32':>8s} | {'RMSE':>8s}"
     print(header)
     print("-" * 90)
-    
+
     # Iterate results
     for row in all_results:
         model_id, mode_name, period, desc, MAE, MAE_16, MAE_32, MAE_STD, MAX_ERROR, RMSE = row
@@ -283,10 +283,10 @@ def run_frequency_mismatch_test():
 
     for model_id in models:
         model_results = [record for record in all_results if record[0] == model_id and record[4] is not None]
-        
+
         if len(model_results) < 2:
             continue
-        
+
         print(f"\n[{model_id}]")
 
         # Baseline(24->24)

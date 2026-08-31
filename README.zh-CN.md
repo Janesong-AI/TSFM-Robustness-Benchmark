@@ -17,6 +17,7 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    - `constants.py`: 全局常量定义.
    - `settings.py`: 全局环境变量配置(如 `TIMECHO_API_KEY`等).
 - `core/`: 业务核心通用组件层 (封装业务逻辑与状态管理)
+   - `metrics.py`: 评估计算指标.
    - `models.py`: 共享数据模型 (TestStatus、TestResult、BatchReport).
    - `results.py`: 测试结果管理器 (批量缓冲/持久化).
    - `resume.py`: 策略控制器 (限流判断/断点续跑).
@@ -28,7 +29,6 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    - `concurrent.py`: 并发控制与进程协同模块.
    - `data_sanitizer.py`: 数据清洗与类型安全工具.
    - `files.py`: 文件操作工具.
-   - `metrics.py`: 评估计算指标.
    - `runner.py`: 测试运行核心原语 (AST 静态发现 + 单用例执行 + 内存态结果追踪)
 - `README.md`: 项目说明文档, 提供项目概述、使用方法、注意事项等.
 - `run.py`: **项目统一入口**, 负责引导 `sys.path` 并按模块名或文件路径启动指定测试脚本.
