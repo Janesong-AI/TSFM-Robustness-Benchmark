@@ -39,13 +39,13 @@ from config.settings import RESULTS_DIR
 from config import constants as CONSTANTS
 from core.timecho import forecast
 from utils.metrics import evaluate_prediction
-from utils.files import save_to_csv
+from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 0.Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "freqMismatch"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "freqMismatch"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "frequency_mismatch_result.csv"    # Prediction results file
 
 FORECAST_LEN = CONSTANTS.FORECAST_POINT_LEN_64  # 64

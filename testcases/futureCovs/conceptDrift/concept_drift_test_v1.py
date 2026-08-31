@@ -35,13 +35,13 @@ from config.settings import RESULTS_DIR
 from config.constants import MODEL_LIST, FORECAST_POINT_LEN_64, TRAIN_SEQ_LEN_512
 from core.timecho import forecast
 from utils.metrics import calc_metrics
-from utils.files import save_to_csv
+from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 1. Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "conceptDrift"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "conceptDrift"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v1.csv"    # Prediction results file
 
 N_TRAIN = TRAIN_SEQ_LEN_512          # Total length of training segment (including history window and preceding data)

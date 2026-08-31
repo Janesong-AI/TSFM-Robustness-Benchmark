@@ -40,13 +40,13 @@ from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64, FORECAST_POINT_LEN_256
 from core.timecho import forecast
 from utils.metrics import calc_metrics
-from utils.files import save_to_csv
+from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 0. Configuration Constants
 # ============================================================
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "irregularSampling"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "irregularSampling"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "irregular_sampling_result.csv"    # Prediction results file
 
 HISTORY_LEN = FORECAST_POINT_LEN_256     # 256 historical points for input

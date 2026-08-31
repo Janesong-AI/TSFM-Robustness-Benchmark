@@ -22,13 +22,13 @@ from config.settings import RESULTS_DIR
 from config.constants import FORECAST_POINT_LEN_64
 from core.timecho import forecast
 from utils.metrics import calc_metrics
-from utils.files import save_to_csv
+from utils.files import save_to_csv, ensure_dir
 
 # ============================================================
 # 0. Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "inputLength"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "inputLength"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "input_length_result.csv"    # Prediction results file
 
 # List of historical input lengths under test

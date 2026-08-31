@@ -70,12 +70,13 @@ from core.results import load_results_from_csv, append_result_to_csv
 from core.resume import is_rate_limited
 from core.timecho import forecast
 from utils.metrics import calc_metrics
+from utils.files import ensure_dir
 
 # ============================================================
 # 1. Data related configuration
 # ============================================================
-OUTPUT_SUBDIR = RESULTS_DIR / "features" / "futureCovs" / "conceptDrift"
-OUTPUT_SUBDIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_SUBDIR = RESULTS_DIR / "futureCovs" / "conceptDrift"
+ensure_dir(OUTPUT_SUBDIR)
 RESULT_CSV_PATH = OUTPUT_SUBDIR / "concept_drift_result_v2_error.csv"
 
 N_CONTEXT = CONTEXT_LENGTH_512      # 上下文窗口总长度(历史段)
