@@ -39,7 +39,7 @@ import time
 import numpy as np
 import pandas as pd
 
-from utils.client import get_timecho_client
+from core.client import get_timecho_client
 
 # ============================================================
 # Prediction Value Extraction

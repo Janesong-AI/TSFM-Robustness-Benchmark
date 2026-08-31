@@ -72,7 +72,7 @@ results = []
 for model_id in MODEL_LIST:
     print(f"\n  Testing model: {model_id}")
 
-    # Call forecast API with real covariates
+   # Call API through core/timecho.py wrapper
     pred_values, elapsed_ms, error = forecast(
         targets=history_targets,
         history_covs=history_covs,

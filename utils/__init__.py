@@ -12,11 +12,6 @@ log — Logging Management
   Centralized logging configuration and management.
   Provides a unified interface for log initialization, handler management, and context propagation.
 
-client.py — TimechoAI Client Connection
-  Provides factory functions get_timecho_client() / get_timecho_async_client(),
-  unifying the creation and lifecycle management of TimechoAIClient / TimechoAIAsyncClient instances.
-  Prevents duplicate handling of API_KEY and initialization logic across modules.
-
 data_sanitizer.py — Data Sanitization & Type Safety
   Handles NaN/Inf values for JSON compatibility and provides robust type conversion.
   Ensures data integrity before persistence or transmission.
@@ -35,9 +30,7 @@ concurrent.py —— (Internal) Concurrent Utilities
 
 Usage Conventions:
 --------------------------
-1. Business modules (e.g., testcases/) should access TimechoAI services indirectly through core.timecho.
-2. The core layer is the only module that directly uses utils.client.
-3. Files and data_sanitizer can be used directly by core layers, but testcases should prefer core interfaces.
+  Files and data_sanitizer can be used directly by core layers, but testcases should prefer core interfaces.
 
 Import Path Examples:
 -----------------------------
@@ -50,8 +43,6 @@ Import Path Examples:
 
 __all__ = [
     "log",
-    "client",
-    "concurrent",
     "data_sanitizer",
     "files",
     "runner",

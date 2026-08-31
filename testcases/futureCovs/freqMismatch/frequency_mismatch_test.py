@@ -208,7 +208,7 @@ def run_frequency_mismatch_test():
             cfg = mode_configs[mode_name]
 
             try:
-                # Call prediction function
+                # Call API through core/timecho.py wrapper
                 pred, _, _ = forecast(
                     targets=df_history,
                     model_id=model_id,

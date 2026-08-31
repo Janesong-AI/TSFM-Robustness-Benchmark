@@ -12,23 +12,23 @@ The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate 
 
 The project follows a standard layered architecture:
 
-- `config/`: Global configuration management module
-  - `constants.py`: Global constants definition.
+- `config/`: Global Configuration Management Module
+  - `constants.py`: Global constant definitions.
   - `settings.py`: Global environment variables (e.g., `TIMECHO_API_KEY`).
-- `core/`: Business Core Layer (Encapsulates logic and state)
-  - `metrics.py`: Evaluation Metrics Calculator.
+- `core/`: Core Business Components Layer (Encapsulates logic and state management)
+  - `client.py`: Low-level client connection (internal bridging module; business code should access it indirectly via timecho.py).
+  - `metrics.py`: Evaluation and computation metrics.
   - `models.py`: Shared data models (TestStatus, TestResult, BatchReport).
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
 - `testcases/`: Business Scenario Test Cases
-- `utils/`: Utility Layer (Stateless pure functions)
-  - `log/`: Logging Management Module (Encapsulates core logging logic, formatters, and context handlers).
-  - `client.py`: Low-level Client Connection.
-  - `concurrent.py`: Concurrency control and process coordination module.
+- `utils/`: Foundational Utilities Layer (Stateless pure functions)
+  - `log/`: Logging management module (Encapsulates core logging logic, formatters, and context handlers).
+  - `concurrent.py`: Concurrency control and process coordination module (internal bridging module).
   - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
   - `files.py`: File Operation Utils.
-  - `runner.py`: Test execution core primitives (AST static discovery + single-case execution + in-memory result tracking).
+  - `runner.py`: Core Test execution primitives (AST static discovery + single-case execution + in-memory result tracking).
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 - `run.py`: **Unified project entry point**, responsible for bootstrapping `sys.path` and launching specific test scripts by module name or file path.
 

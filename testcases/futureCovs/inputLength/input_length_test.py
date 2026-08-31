@@ -94,7 +94,7 @@ def run_input_length_test() -> list:
 
             t0 = time.perf_counter()
             try:
-                # Invoke the core-layer wrapper, which internally calls utils.client.get_timecho_client()
+                # Call API through core/timecho.py wrapper
                 pred_values, elapsed_ms, error = forecast(
                     targets=history,
                     model_id=model_id,
