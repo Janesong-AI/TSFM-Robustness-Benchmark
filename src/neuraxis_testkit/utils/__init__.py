@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-neuraxis_testkit/utils - Infrastructure Utility Layer
+neuraxis_testkit/utils - Neuraxis TestKit Common Utility Layer
 
 This package provides stateless pure functions and generic entity wrappers, serving as the
 underlying support for the entire project. It currently includes:
 
 Modules:
 -------
+concurrent.py —— (Internal) Concurrent Utilities
+  Provides thread-safe primitives (FileLock, ProcessSafeCache) used internally.
+
 log — Logging Management
   Centralized logging configuration and management.
   Provides a unified interface for log initialization, handler management, and context propagation.
@@ -24,15 +27,11 @@ runner.py — Test Runner Core
   Test discovery (AST static analysis), single-case execution (timeout + retry), result tracking.
   Provides the execution primitives shared by run.py, conftest.py, and core/resume.py.
 
-concurrent.py —— (Internal) Concurrent Utilities
-  Provides thread-safe primitives (FileLock, ProcessSafeCache) used internally.
-  NOT exposed in __all__. Used by results.py for file operation safety.
-
 Usage Conventions:
 --------------------------
   Files and data_sanitizer can be used directly by core layers, but testcases should prefer core interfaces.
 
-Import Path Examples:
+Usage Examples:
 -----------------------------
 >>> # Utils layer usage (for core layer developers)
 >>> from neuraxis_testkit.log import get_logger, setup_logging
@@ -42,7 +41,7 @@ Import Path Examples:
 """
 
 __all__ = [
-    "log",
+    "concurrent",
     "data_sanitizer",
     "files",
     "runner",

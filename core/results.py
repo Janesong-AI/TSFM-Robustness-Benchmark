@@ -372,7 +372,7 @@ def append_result_to_csv(
         - Independent buffer per file (safe for concurrent tasks)
         - Atomic append+flush (no race condition)
 
-    Usage:
+    Example:
         # Normal append (buffered)
         append_result_to_csv("./results.csv", result)
 

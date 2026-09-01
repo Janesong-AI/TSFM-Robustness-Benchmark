@@ -253,14 +253,14 @@ def read_csv_to_list(
     encoding: str = "utf-8"
 ) -> list[dict[str, Any]]:
     """
-    Read CSV file as list of dictionaries
+    Read CSV file as a list of dictionaries. (Generic CSV parser)
 
     Args:
         result_csv_path_file: CSV file path (including filename), required parameter
         encoding: File encoding, default 'utf-8'
 
     Returns:
-        List[Dict[str, Any]]: List of dictionaries, each dictionary represents one row of data
+        list[dict[str, Any]]: List of dictionaries, each dictionary represents one row of data
 
     Example:
         >>> data = read_csv_to_list("./results/test.csv")
@@ -308,8 +308,8 @@ def ensure_dir(path) -> Path:
     If the directory already exists, no error is raised. Returns the corresponding Path object.
     Accepts either a string or a Path object as input.
 
-    Usage:
-        ensure_dir(RESULTS_DIR / "futureCovs" / "dirtyData" / "data")
+    Example:
+        ensure_dir(RESULTS_DIR / "futureCovs" / "dirtyData")
     """
     p = Path(path)
     # If a file path is provided, create its parent directory instead.

@@ -12,7 +12,7 @@ Core Features:
   - Checkpoint resumption strategy
   - Retry decision logic
 
-Usage:
+Usage Examples:
     from core.resume import is_rate_limited, should_skip_test
 
     # Check if error is rate limit

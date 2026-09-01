@@ -1,18 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
-neuraxis_testkit/log/__init__.py -- Unified Entry Point for Logging Module
+neuraxis_testkit/log - Neuraxis TestKit Logging Module
 
 Provides a concise logging interface and hides internal implementation details.
 
-Usage:
+Usage Examples:
     from neuraxis_testkit.log import get_logger, setup_logging
 
-    logger = get_logger('my_module')
+    logger = get_logger(__name__)
     logger.info("Hello World")
 """
 import threading
-_default_logger_lock = threading.Lock()
 from .core import Logger
 from .decorators import log_execution, log_time
 from .context import LogLevelContext
@@ -25,12 +24,13 @@ from .config import (
 )
 
 # Convenience Functions
+_default_logger_lock = threading.Lock()
 _default_logger: Logger | None = None
 
 
-def get_logger(name: str = 'root', **kwargs) -> Logger:
+def get_logger(name: str = "neuraxis", **kwargs) -> Logger:
     """
-    Convenience function to obtain a logger instance.
+    Get a logger instance. Recommended to use module name for 'name'.
 
     Args:
         name: Name of the logger. It is recommended to use the module name.
@@ -45,7 +45,7 @@ def get_logger(name: str = 'root', **kwargs) -> Logger:
     return Logger.get_logger(name, **kwargs)
 
 def get_default_logger() -> Logger:
-    """Retrieves the default logger instance."""
+    """Get a default global logger for quick scripts."""
     global _default_logger
     with _default_logger_lock:
         if _default_logger is None:

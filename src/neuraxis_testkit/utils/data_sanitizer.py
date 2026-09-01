@@ -17,7 +17,7 @@ Module Position in Architecture:
     - Dependencies: json, math (standard libraries only)
     - Called by: core.* (business logic layer)
 
-Usage Example:
+Usage Examples:
 --------------
 >>> from neuraxis_testkit.utils.data_sanitizer import clean_nan_values, safe_float
 >>> 
@@ -33,9 +33,8 @@ Author: Janesong
 Create Date: 2026/08/17
 """
 
+import json, re
 import numpy as np
-import json
-import re
 from typing import Any
 
 def clean_nan_values(obj: Any, 

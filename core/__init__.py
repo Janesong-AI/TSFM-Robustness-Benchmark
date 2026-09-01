@@ -27,9 +27,9 @@ resume.py —— Strategy Controller
   Provides checkpoint resumption logic and rate limit detection strategy.
 
 timecho.py —— TimechoAI Interaction Layer
-    Encapsulates API requests and response handling, offering a unified high-level API.
+  Encapsulates API requests and response handling, offering a unified high-level API.
 
-Usage:
+Usage Examples:
 --------------
 1. Business modules (e.g., testcases/) should access TimechoAI services indirectly through core.timecho.
 2. The core layer is the only module that directly uses utils.client.

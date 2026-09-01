@@ -3,7 +3,7 @@
 """
 TSFM-Robustness-Benchmark — Unified Entry Point
 
-Usage:
+Usage Examples:
   # Single test case
   python run.py testcases.futureCovs.dirtyData.test_dirty
 

@@ -35,7 +35,7 @@ class TestDiscoverer:
     Discovers test modules via AST static analysis.
     Never imports modules — zero side effects.
 
-    Usage:
+    Usage Examples:
       - run.py --list: List all tests
       - conftest.py: Can replace pytest_collect_file for pre-filtering
       - core/resume.py: Determine the full scope for checkpoint recovery
