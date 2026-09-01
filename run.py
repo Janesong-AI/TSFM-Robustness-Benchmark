@@ -28,7 +28,8 @@ _BOOTSTRAP_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from config.settings import PROJECT_ROOT
-from neuraxis_testkit.log import get_logger, get_log_file_path, flush_all_logs, get_log_level
+from neuraxis_testkit.log import get_logger, flush_all_logs
+from neuraxis_testkit.log.config import get_log_file_path, get_log_level
 from neuraxis_testkit.utils.runner import TestRunner, parse_module_path
 
 if sys.platform == "win32":
