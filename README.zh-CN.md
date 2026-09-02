@@ -6,12 +6,15 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
 本次版本包含对TimechoAI作为首个靶向模型的系统性评估, 更多模型将在后续迭代中逐步整合.
 
 ## 1. 核心架构 - 分层架构
-- 本项目基于 **Python 3.12+** 开发，核心依赖 `pytest`、`timecho-ai` 和 `pandas`.
-- 系统采用清晰的分层架构，确保业务逻辑、基础工具与测试执行解耦.
+- 本项目基于 **Python 3.12+** 开发, 核心依赖 `pytest`、`timecho-ai` 和 `pandas`.
+- 系统采用清晰的分层架构, 确保业务逻辑、基础工具与测试执行解耦.
+- 中间基础层原生支持 **跨平台运行** (Windows / macOS / Linux) 与 **并发执行** (基于 `pytest-xdist` 的分布式用例调度, 以及进程级并发控制).
+- 测试工具箱 (`neuraxis_testkit`) 以 SDK 形式独立打包于 `src/` 目录下, 与业务代码解耦, 可直接复用至其他产品线.
+
 
 ## 2. 目录与文件规范
 
-项目遵循标准分层架构，目录结构如下：
+项目遵循标准分层架构, 目录结构如下:
 
 - `config/`: 全局配置管理模块
    - `constants.py`: 全局常量定义.
@@ -23,16 +26,27 @@ TSFM 鲁棒性基准测试是一种系统化的测试工具, 旨在检验时间�
    - `results.py`: 测试结果管理器 (批量缓冲/持久化).
    - `resume.py`: 策略控制器 (限流判断/断点续跑).
    - `timecho.py`: API 交互封装.
-- `neuraxis_testkit/`: 测试工具箱
-  - `log/`: 日志管理模块 (封装核心日志逻辑、格式化器及上下文处理器).
-  - `utils/`: 基础工具层
-     - `concurrent.py`: 并发控制与进程协同模块 (内部桥接模块).
-     - `data_sanitizer.py`: 数据清洗与类型安全工具.
-     - `files.py`: 文件操作工具.
-     - `runner.py`: 测试运行核心原语 (AST 静态发现 + 单用例执行 + 内存态结果追踪)
+- `src/`: **SDK 源码目录** (随项目统一打包发布, 不包含业务代码; 业务侧依赖并调用该层, 以便跨产品线复用)
+  - `neuraxis_testkit/`: 测试工具箱
+    - `log/`: 日志管理模块
+      - `config.py`: 日志变量配置.
+      - `context.py`: 上下文管理器 (`LogLevelContext`).
+      - `core.py`: 核心 `Logger` 类.
+      - `decorators.py`: 装饰器 (`log_execution`, `log_time`).
+      - `filters.py`: 日志过滤器 (`ModuleLevelFilter`, `IgnoredLoggerFilter`).
+      - `formatters.py`: 日志格式化器 (`ColoredFormatter`).
+      - `handlers.py`: Handler 管理.
+    - `pytest_infra/`: pytest 基础设施层 【开发中 / WIP】— 提供测试夹具、清单驱动参数化与断点续跑等基础设施封装. 当前处于调试完善阶段, 接口暂不稳定, 暂不建议外部直接依赖; 内部模块结构将在接口定稿后于文档中披露.
+    - `utils/`: 基础工具层
+      - `concurrent.py`: 并发控制与进程协同模块(内部桥接模块).
+      - `data_sanitizer.py`: 数据清洗与类型安全工具.
+      - `files.py`: 文件操作工具.
+      - `runner.py`: 测试运行核心原语 (AST 静态发现 + 单用例执行 + 内存态结果追踪)
 - `testcases/`: 业务场景测试用例
 - `README.zh-CN.md`: 项目说明文档, 提供项目概述、使用方法、注意事项等.
-- `run.py`: **项目统一入口**, 负责引导 `sys.path` 并按模块名或文件路径启动指定测试脚本.
+- `conftest.py`: pytest 入口配置, 内部桥接至 [`neuraxis_testkit.pytest_infra.conftest`](https://github.com/Neuraxis-Labs/TSFM-Robustness-Benchmark/blob/main/src/neuraxis_testkit/pytest_infra/conftest.py), 以复用根级 fixtures 与 hooks.
+- `run.py`: **项目统一入口**, 负责引导 `sys.path` 并按模块名或文件路径启动指定测试脚本. 【计划废弃】待 pytest 驱动链路调试稳定后, 该入口将由 pytest 直接替代并移除.
+
 
 ## 3. 测试流程
 
@@ -80,21 +94,23 @@ source .venv/bin/activate
 
 ### 4.4 安装项目依赖
 
-在激活虚拟环境后首次执行以下命令安装核心依赖：
+> **注意：** 本项目需使用 **Python 3.12 或更高版本**。请在安装前确认您的 Python 版本。
+
+在激活虚拟环境后首次执行以下命令安装核心依赖:
 
 ```bash
-python -m pip install timecho-ai pandas pytest pytest-xdist portalocker
+python -m pip install timecho-ai pandas pytest pytest-xdist portalocker pytest-html python-dotenv pyyaml
 ```
 
 > ** 平台提示:** 
-> 如果您的代码在 Windows 上运行，为了确保跨进程文件锁的正常工作，建议安装带有 Windows 扩展的 `portalocker`：
+> 如果您的代码在 Windows 上运行, 为了确保跨进程文件锁的正常工作, 建议安装带有 Windows 扩展的 `portalocker`:
 > ```bash
 > python -m pip install "portalocker[win32]"
 > ```
 
 ## 5. 快速运行
 
-通过项目统一入口 `run.py` 启动测试：
+通过项目统一入口 `run.py` 启动测试:
 ```bash
 # 按模块名启动测试
 python run.py <module_name>
