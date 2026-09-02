@@ -29,18 +29,10 @@ sys.path.insert(0, str(_BOOTSTRAP_ROOT))
 
 from config.settings import PROJECT_ROOT
 from neuraxis_testkit.log import get_logger, flush_all_logs
-from neuraxis_testkit.log.config import get_log_file_path, get_log_level, LOG_ENCODING
+from neuraxis_testkit.log.config import get_log_file_path, get_log_level, force_console_encoding
 from neuraxis_testkit.utils.runner import TestRunner, parse_module_path
 
-def _force_console_encoding(encoding: str) -> None:
-    for stream in (sys.stdout, sys.stderr):
-        if stream is None:
-            continue
-        try:
-            stream.reconfigure(encoding=encoding, errors="backslashreplace")
-        except Exception:
-            pass
-_force_console_encoding(LOG_ENCODING)
+force_console_encoding()
 
 def main():
     parser = argparse.ArgumentParser(

@@ -145,6 +145,22 @@ VALID_LEVELS = set(LEVEL_MAP.keys())
 # Convenience Functions
 # ============================================================
 
+def force_console_encoding(encoding: str = LOG_ENCODING) -> None:
+    """
+    Force reconfigure stdout/stderr encoding.
+    """
+    for name, stream in (("stdout", sys.stdout), ("stderr", sys.stderr)):
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
+        try:
+            stream.reconfigure(encoding=encoding, errors="backslashreplace")
+        except Exception:    # noqa: BLE001 - best-effort
+            try:
+                print(f"[WARN] force_console_encoding: reconfigure {name} failed",
+                      file=sys.__stderr__, flush=True)
+            except Exception:
+                pass
+
 def get_log_level() -> int:
     """Gets the integer representation of the log level."""
     return LEVEL_MAP.get(LOG_LEVEL.upper(), logging.INFO)
