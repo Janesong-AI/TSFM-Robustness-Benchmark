@@ -30,6 +30,7 @@ def save_to_csv(
     mode: str = "w",
     encoding: str = "utf-8",
     columns: list[str] | None = None,
+    strict_suffix: bool = True,
     **kwargs
 ) -> Path:
     """
@@ -77,7 +78,9 @@ def save_to_csv(
     file_path = Path(result_csv_path_file)
 
     # Validate file extension
-    if file_path.suffix.lower() != ".csv":
+    # Suffix validation: strict mode requires ".csv"; non-strict only checks when a suffix exists
+    suffix = file_path.suffix.lower()
+    if strict_suffix and suffix != ".csv":
         raise CSVFileError(f"File extension must be .csv; current is: {file_path.suffix}")
 
     # Create parent directory (if not exists)
