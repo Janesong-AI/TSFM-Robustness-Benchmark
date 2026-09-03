@@ -1,9 +1,14 @@
 """
-config - 
+config - Global Configuration Management Module
 
-constants.py
+Modules:
+-------
+constants.py - Global constant bussiness definitions
 
-settings.py
-  Prevents duplicate handling of API_KEY and initialization logic across modules.
+settings.py - Global environment variables
 
 """
+__all__ = [
+    "constants",
+    "settings",
+]
