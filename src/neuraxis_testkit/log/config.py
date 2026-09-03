@@ -32,7 +32,7 @@ else:
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
 
 # Log file base name
-LOG_FILE_BASENAME: str = os.getenv("LOG_FILE_BASENAME", "tsfm_benchmark")
+LOG_FILE_BASENAME: str = os.getenv("LOG_FILE_BASENAME", "neuraxis_testkit")
 
 # Whether to include date in the filename
 LOG_FILE_WITH_DATE: bool = os.getenv("LOG_FILE_WITH_DATE", "true").lower() == "true"
@@ -104,7 +104,7 @@ def _generate_log_file_name() -> str:
     Generates the log filename with optional date suffix.
 
     Returns:
-        Log filename, e.g., tsfm_benchmark_20260820.log
+        Log filename, e.g., neuraxis_testkit_20260820.log
     """
     if LOG_FILE_WITH_DATE:
         date_str = datetime.now().strftime("%Y%m%d")
@@ -128,7 +128,7 @@ if not hasattr(logging, 'TRACE'):
 if not hasattr(logging, 'trace'):
     def trace(self, msg, *args, **kwargs):
         if self.isEnabledFor(logging.TRACE):
-            self._log(logging.TRACE, msg, args, **kwargs)
+           self._log(logging.TRACE, msg, args, **kwargs)
     setattr(logging.Logger, 'trace', trace)
 
 LEVEL_MAP = {

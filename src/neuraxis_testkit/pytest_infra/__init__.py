@@ -1,5 +1,7 @@
 
 """
+neuraxis_testkit/pytest_infra - Neuraxis Pytest Infrastructure Layer
+====================================
 
 Modules:
 -------
@@ -13,12 +15,13 @@ models.py —— Shared Data Models
 Import Path Examples:
 -----------------------------
 >>> # Data models
->>> from pytest_infra.models import TestStatus, TestResult, BatchReport
+>>> from neuraxis_testkit.pytest_infra import TestStatus, TestResult, BatchReport
 >>> result = TestResult(module_path="test_xxx.py")
 >>> result.mark_start()
 >>> result.mark_end(TestStatus.PASSED)
->>> print(result.status.get_display("PASSED"))  # i18n display
 """
+
+from .models import BatchReport, TestResult, TestStatus
 
 __all__ = [
     "collection",
@@ -27,4 +30,8 @@ __all__ = [
     "models",
     "resume",
     "session_manager",
+    # Core
+    "TestStatus",
+    "TestResult",
+    "BatchReport",
 ]

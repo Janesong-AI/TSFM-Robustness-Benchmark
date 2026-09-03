@@ -172,7 +172,7 @@ def save_with_json_backup(
 ) -> tuple[Path, Path | None]:
     """
     Save results to CSV, with optional JSON backup
-    
+
     Args:
         result_csv_path_file: CSV file path (including filename), required parameter
         data: Data to save
@@ -180,7 +180,7 @@ def save_with_json_backup(
         index: Whether to save index, default False
         encoding: File encoding, default 'utf-8'
         **kwargs: Additional parameters
-        
+
     Returns:
         tuple[Path, Optional[Path]]: (CSV path, JSON path or None)
 
@@ -196,23 +196,23 @@ def save_with_json_backup(
         encoding=encoding,
         **kwargs
     )
-    
+
     json_path = None
     if save_json:
         # Generate JSON file path
         csv_path_obj = Path(result_csv_path_file)
         json_path = csv_path_obj.with_suffix(".json")
-        
+
         # Convert data format
         if isinstance(data, pd.DataFrame):
             json_data = data.to_dict(orient="records")
         else:
             json_data = data
-        
+
         # Save JSON
         with open(json_path, "w", encoding=encoding) as f:
             json.dump(json_data, f, indent=2, ensure_ascii=False, default=str)
-    
+
     return csv_path, json_path
 
 

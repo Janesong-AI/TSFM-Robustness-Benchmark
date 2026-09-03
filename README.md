@@ -24,7 +24,7 @@ The project follows a standard layered architecture:
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
-- `src/`: **SDK source directory** (packaged and released with the project; contains no business code. Business code depends on and calls this layer, enabling reuse across product lines.)
+- `src/`: **SDK source directory**
   - `neuraxis_testkit/`: Test toolkit
     - `log/`: Logging management module.
       - `config.py`: Logging variable configuration.
@@ -44,7 +44,6 @@ The project follows a standard layered architecture:
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 - `conftest.py`: pytest entry-point configuration; internally bridges to [`neuraxis_testkit.pytest_infra.conftest`](https://github.com/Neuraxis-Labs/TSFM-Robustness-Benchmark/blob/main/src/neuraxis_testkit/pytest_infra/conftest.py) to reuse root-level fixtures and hooks.
 - `run.py`: **Unified project entry point**, responsible for bootstrapping `sys.path` and launching the specified test script by module name or file path. 【Planned for removal】— Once the pytest-driven workflow is stable, this entry point will be replaced by pytest directly and removed.
-
 
 ## 3. Testing Workflow
 

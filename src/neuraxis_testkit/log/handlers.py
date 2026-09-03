@@ -99,13 +99,13 @@ def create_handlers(level: int, console_output: bool, file_output: bool, use_col
         A list of logging.Handler instances.
     """
     handlers = []
-    
+
     if console_output:
         handlers.append(create_console_handler(level, use_color))
-    
+
     if file_output:
         handlers.append(create_file_handler(level))
-    
+
     return handlers
 
 

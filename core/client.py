@@ -5,7 +5,8 @@ core/client.py —— TimechoAI Client Factory
 
 Purpose: Unified management of TimechoAIClient / TimechoAIAsyncClient instance
          creation, shielding API_KEY retrieval logic.
-Design Goals: All business modules (core, features) should obtain clients through this factory, in order to:
+
+Design Goals: All business modules (core, testcases) should obtain clients through this factory, in order to:
     1. API_KEY is only read from config.settings, one modification takes effect globally
     2. Mock clients can be injected here in the future, facilitating testing
     3. Only need to modify this file when SDK constructor signature changes
