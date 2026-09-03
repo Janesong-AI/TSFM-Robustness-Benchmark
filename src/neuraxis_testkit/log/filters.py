@@ -32,7 +32,7 @@ class ModuleLevelFilter(logging.Filter):
                     break
             else:
                 min_level = None
-        
+
         if min_level is not None:
             return record.levelno >= min_level
         return True

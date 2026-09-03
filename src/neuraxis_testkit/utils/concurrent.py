@@ -26,18 +26,10 @@ Design Notes:
 Create Date: 2026/08/25.
 """
 
-import os, time, json, atexit, tempfile
+import os, time, json, atexit, tempfile, portalocker
 from pathlib import Path
 from typing import Any
 from neuraxis_testkit.log import get_logger
-
-try:
-    import portalocker
-except ImportError:
-    raise ImportError(
-        "portalocker is required for cross-platform file locking. "
-        "Install with: pip install portalocker"
-    )
 
 logger = get_logger(__name__)
 

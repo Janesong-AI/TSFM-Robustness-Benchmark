@@ -26,7 +26,7 @@ class Logger:
     Logger Management Class - Singleton Pattern
 
     Core Features:
-        - Unified Logging: Consolidates all logs into a single log file (e.g., outputs/logs/tsfm_benchmark.log).
+        - Unified Logging: Consolidates all logs into a single log file (e.g., outputs/logs/neuraxis_testkit.log).
         - Thread-Safe: Ensures concurrency safety (uses locking).
         - Async Support: Supports asynchronous logging via QueueHandler and QueueListener.
         - Module Overrides: Supports module-level log level overrides.
@@ -167,7 +167,7 @@ class Logger:
             )
             cls._queue_listener.start()
             atexit.register(cls._stop_queue_listener)
-        
+
         # Store handler references (for adding to loggers later)
         cls._shared_handlers = handlers
 

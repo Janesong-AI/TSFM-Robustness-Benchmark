@@ -5,8 +5,9 @@
 The TSFM Robustness Benchmark is a systematic testing tool designed to evaluate the engineering robustness of Time Series Foundation Models (TSFMs) in edge cases (e.g., frequency mismatch, data contamination, covariate interference). This release includes a systematic evaluation of TimechoAI as the first targeted model. More models will be integrated in subsequent iterations.
 
 ## 1. Core Architecture - Layered Architecture
-- This project is developed with **Python 3.12+** and relies on `pytest`, `timecho-ai`, and `pandas` as core dependencies.
-- The system adopts a clear layered architecture to ensure the decoupling of business logic, foundational utilities, and test execution.
+- This project is built on **Python 3.12+**, with core dependencies including `pytest`, `timecho-ai`, and `pandas`.
+- The system adopts a clear layered architecture, decoupling business logic, infrastructure utilities, and test execution.
+- The middle infrastructure layer natively supports **cross-platform execution** (Windows / macOS / Linux) and **concurrent execution** (distributed test scheduling via `pytest-xdist`, plus process-level concurrency control).
 
 ## 2. Directory & File Structure
 
@@ -22,13 +23,21 @@ The project follows a standard layered architecture:
   - `results.py`: Test result manager (batch buffering/persistence).
   - `resume.py`: Strategy controller (rate-limiting/checkpoint resume).
   - `timecho.py`: API interaction wrapper.
-- `neuraxis_testkit/`: Test Toolkit
-  - `log/`: Logging management module (Encapsulates core logging logic, formatters, and context handlers).
-  - `utils/`: Foundational Utilities Layer
-    - `concurrent.py`: Concurrency control and process coordination module (internal bridging module).
-    - `data_sanitizer.py`: Data Sanitization & Type Safety Utils.
-    - `files.py`: File Operation Utils.
-    - `runner.py`: Core Test execution primitives (AST static discovery + single-case execution + in-memory result tracking).
+- `src/`: **SDK source directory**
+  - `neuraxis_testkit/`: Test toolkit
+    - `log/`: Logging management module.
+      - `config.py`: Logging variable configuration.
+      - `context.py`: Context managers (`LogLevelContext`).
+      - `core.py`: Core `Logger` class.
+      - `decorators.py`: Decorators (`log_execution`, `log_time`).
+      - `filters.py`: Log filters (`ModuleLevelFilter`, `IgnoredLoggerFilter`).
+      - `formatters.py`: Log formatters (`ColoredFormatter`).
+      - `handlers.py`: Handler management.
+    - `utils/`: Basic utilities layer
+      - `concurrent.py`: Concurrency control and process coordination module (internal bridge module).
+      - `data_sanitizer.py`: Data sanitization and type-safety utilities.
+      - `files.py`: File operation utilities.
+      - `runner.py`: Core test-running primitives (AST-based static discovery + single-case execution + in-memory result tracking).
 - `testcases/`: Business Scenario Test Cases
 - `README.md`: Project documentation, providing an overview, usage instructions, and notes.
 - `run.py`: **Unified project entry point**, responsible for bootstrapping `sys.path` and launching specific test scripts by module name or file path.
@@ -78,6 +87,8 @@ source .venv/bin/activate
 ```
 
 ### 4.4 Install Dependencies
+
+> **Note:** This project requires **Python 3.12 or later**. Please verify your Python version before installing.
 
 After activating the virtual environment, execute the following command to install the core dependencies:
 
