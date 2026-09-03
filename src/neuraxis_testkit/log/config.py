@@ -32,7 +32,7 @@ else:
 LOG_LEVEL: str = os.getenv("LOG_LEVEL", "DEBUG")
 
 # Log file base name
-LOG_FILE_BASENAME: str = os.getenv("LOG_FILE_BASENAME", "neuraxis_testkit")
+LOG_FILE_BASENAME: str = os.getenv("LOG_FILE_BASENAME", "neuraxis_testkit")  # standalone fallback only
 
 # Whether to include date in the filename
 LOG_FILE_WITH_DATE: bool = os.getenv("LOG_FILE_WITH_DATE", "true").lower() == "true"
@@ -107,14 +107,11 @@ def _generate_log_file_name() -> str:
         Log filename, e.g., neuraxis_testkit_20260820.log
     """
     if LOG_FILE_WITH_DATE:
-        date_str = datetime.now().strftime("%Y%m%d")
-        return f"{LOG_FILE_BASENAME}_{date_str}.log"
-    else:
-        return f"{LOG_FILE_BASENAME}.log"
-
+        return f"{LOG_FILE_BASENAME}_{datetime.now().strftime('%Y%m%d')}.log"
+    return f"{LOG_FILE_BASENAME}.log"
 
 # Dynamically generated log filename
-LOG_FILE_NAME: str = _generate_log_file_name()
+LOG_FILE_NAME: str = _generate_log_file_name()   # standalone fallback only
 
 
 # ============================================================
@@ -170,7 +167,7 @@ def is_async_enabled() -> bool:
     return LOG_QUEUE_SIZE > 0
 
 def get_log_file_path() -> Path:
-    """Gets the full path to the log file."""
+    """Gets the full path to the log file (standalone fallback only)."""
     return LOGS_DIR / LOG_FILE_NAME
 
 
@@ -202,5 +199,4 @@ __all__ = [
     # Convenience Functions
     'get_log_level',
     'is_async_enabled',
-    'get_log_file_path',
 ]
