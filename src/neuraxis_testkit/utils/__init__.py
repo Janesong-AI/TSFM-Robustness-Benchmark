@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
 """
 neuraxis_testkit/utils - Neuraxis TestKit Common Utility Layer
 
